@@ -26,6 +26,7 @@ unit_tests = [
   'test_stream_role',
   'test_stream_dmabuf',
   'test_video_enum',
+  'test_client_modules',
 ]
 
 # Whitebox tests call internal functions the shared library hides, so every
