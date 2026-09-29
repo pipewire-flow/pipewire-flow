@@ -30,11 +30,11 @@ report SKIP rather than failing when a device they need is absent:
 meson test -C build --suite hardware
 ```
 
-The examples, tests, and utilities each build by default and can be turned
-off individually:
+The examples, tests, utilities and footprint benchmarks each build by
+default and can be turned off individually:
 
 ```sh
-meson setup build -Dexamples=false -Dtests=false -Dutils=false
+meson setup build -Dexamples=false -Dtests=false -Dutils=false -Dbench=false
 ```
 
 ## Quick start
@@ -176,6 +176,29 @@ The pixel format is negotiated with the camera as-is, with no conversion in
 between, so `--pixel-format` only accepts what the source itself offers. The
 default `YUYV` and `MJPG` are the usual safe picks for UVC webcams; an
 unsupported format ends the stream with `source lost (error -5)`.
+
+## PipeWire client configuration
+
+A stream or filter does not read PipeWire's `client.conf`. Its context loads
+only the modules a client needs — the native protocol, client-node and
+adapter — and leaves D-Bus support off, where the stock configuration also
+loads client-device, metadata and session-manager. That keeps five shared
+objects out of the process and 190–250 KiB of PSS while it streams.
+
+To have PipeWire read a configuration file as it would for any other client,
+name one in `PIPEWIRE_CONFIG_NAME`:
+
+```sh
+PIPEWIRE_CONFIG_NAME=client.conf ./my-app
+```
+
+A PipeWire too old to build a context without a file falls back to its
+`client.conf` on its own.
+
+`bench/footprint.sh` measures what a process pulls in — threads, file
+descriptors, sockets, shared objects, memory and daemon clients — through
+tinypipewire and through raw `pw_stream` side by side, and what it costs
+before its first stream and after its last.
 
 ## License
 
