@@ -3,7 +3,9 @@
 #
 # Measures what a capture process pulls in while it runs — threads, file
 # descriptors, sockets, mapped shared objects, memory and PipeWire clients —
-# and prints one Markdown table row per run.
+# and prints one Markdown table row per run. The standard matrix then adds
+# bench_idle's view of one process before its first stream, while it
+# streams, and after its last stream is gone.
 #
 #   bench/footprint.sh [-B builddir] [-s settle]            run the standard matrix
 #   bench/footprint.sh [-s settle] -- <label> <cmd> [args]  measure one command
@@ -89,7 +91,8 @@ fi
 
 tpw=$builddir/bench/bench_tpw
 raw=$builddir/bench/bench_raw
-[ -x "$tpw" ] && [ -x "$raw" ] || { echo "footprint.sh: build $builddir first (bench programs missing)" >&2; exit 1; }
+idle=$builddir/bench/bench_idle
+[ -x "$tpw" ] && [ -x "$raw" ] && [ -x "$idle" ] || { echo "footprint.sh: build $builddir first (bench programs missing)" >&2; exit 1; }
 
 header
 measure "tpw audio x1" "$tpw" -t audio -n 1
@@ -100,4 +103,9 @@ for n in 1 3 6; do
     if [ "$n" -gt 1 ]; then
         measure "raw video x$n (--separate)" "$raw" -t video -n "$n" --separate
     fi
+done
+
+for type in audio video; do
+    echo
+    "$idle" -t "$type"
 done
