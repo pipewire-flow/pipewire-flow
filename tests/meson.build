@@ -35,7 +35,7 @@ src_inc = include_directories('../src')
 tinypipewire_objects = tinypipewire_lib.extract_all_objects(recursive: true)
 tinypipewire_internal_dep = declare_dependency(
   include_directories: [tpw_inc, src_inc],
-  dependencies: [pipewire_dep, dependency('threads')],
+  dependencies: [pipewire_dep, dependency('dl'), dependency('threads')],
 )
 
 foreach name : unit_tests
@@ -45,6 +45,12 @@ foreach name : unit_tests
   )
   test(name, exe)
 endforeach
+
+# Links the shared library alone, never libpipewire, so the test sees exactly
+# what the library loads and unloads.
+test('test_pw_unload', executable('test_pw_unload', 'test_pw_unload.c',
+  dependencies: [tinypipewire_dep],
+))
 
 # Tests needing real hardware, or measuring timing. They exit 77 (SKIP)
 # when the device they need is absent, and are kept out of a plain
