@@ -6,6 +6,7 @@
 #include <string.h>
 #include <time.h>
 
+#include <pipewire/impl-module.h>
 #include <pipewire/keys.h>
 
 #include "tpw_log_internal.h"
@@ -62,6 +63,66 @@ static const struct pw_core_events tpw_pw_core_events = {
     .error = tpw_pw_core_on_error,
 };
 
+/* The only modules a stream or filter client needs: the native protocol to
+ * reach the daemon, client-node to export our nodes, and adapter to wrap a
+ * stream's node in format conversion. */
+static const char* const tpw_pw_client_modules[] = {
+    "libpipewire-module-protocol-native",
+    "libpipewire-module-client-node",
+    "libpipewire-module-adapter",
+};
+
+/* Builds a context from no configuration file at all, loading only the
+ * modules and SPA libraries a client needs. The stock client.conf also loads
+ * client-device, metadata and session-manager plus D-Bus support, none of
+ * which this library uses. NULL if any piece fails to load. */
+static struct pw_context* tpw_pw_context_new_minimal(struct pw_loop* loop)
+{
+    /* "null" is PipeWire's name for "read no file"; log.level matches what
+     * client.conf sets, so PipeWire stays as quiet as it was with it. */
+    struct pw_properties* props = pw_properties_new(PW_KEY_CONFIG_NAME, "null",
+                                                    "context.modules.allow-empty", "true",
+                                                    "support.dbus", "false",
+                                                    "log.level", "0", NULL);
+    if (!props)
+        return NULL;
+
+    struct pw_context* context = pw_context_new(loop, props, 0);
+    if (!context)
+        return NULL;
+
+    if (pw_context_add_spa_lib(context, "audio.convert.*", "audioconvert/libspa-audioconvert") < 0 ||
+        pw_context_add_spa_lib(context, "support.*", "support/libspa-support") < 0)
+        goto fail;
+
+    for (size_t i = 0; i < SPA_N_ELEMENTS(tpw_pw_client_modules); i++) {
+        if (!pw_context_load_module(context, tpw_pw_client_modules[i], NULL, NULL)) {
+            tpw_log_warning("failed to load %s", tpw_pw_client_modules[i]);
+            goto fail;
+        }
+    }
+    return context;
+
+fail:
+    pw_context_destroy(context);
+    return NULL;
+}
+
+/* A user who sets PIPEWIRE_CONFIG_NAME has picked a configuration, so it is
+ * used as is. Otherwise the minimal context is tried first, and a PipeWire
+ * that cannot build one (a version without the "null" name, say) falls back
+ * to its stock client.conf. */
+static struct pw_context* tpw_pw_context_new(struct pw_loop* loop)
+{
+    if (!getenv("PIPEWIRE_CONFIG_NAME")) {
+        struct pw_context* context = tpw_pw_context_new_minimal(loop);
+        if (context)
+            return context;
+        tpw_log_info("minimal pipewire context unavailable, using the default client configuration");
+    }
+    return pw_context_new(loop, NULL, 0);
+}
+
 int tpw_pw_core_connect(struct tpw_pw_core_conn* conn, const char* loop_name)
 {
     conn->loop = pw_thread_loop_new(loop_name, NULL);
@@ -77,7 +138,7 @@ int tpw_pw_core_connect(struct tpw_pw_core_conn* conn, const char* loop_name)
 
     pw_thread_loop_lock(conn->loop);
 
-    conn->context = pw_context_new(pw_thread_loop_get_loop(conn->loop), NULL, 0);
+    conn->context = tpw_pw_context_new(pw_thread_loop_get_loop(conn->loop));
     if (!conn->context) {
         pw_thread_loop_unlock(conn->loop);
         tpw_log_error("'%s': failed to create pipewire context", loop_name);
