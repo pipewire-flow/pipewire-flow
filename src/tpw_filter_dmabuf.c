@@ -6,6 +6,7 @@
 #include "tpw_filter_internal.h"
 #include "tpw_log_internal.h"
 #include "tpw_spa_format_internal.h"
+#include "tpw_pw_dl.h"
 
 size_t tpw_filter_port_get_dmabuf_planes(const tpw_filter_port_buffer* buf, tpw_dmabuf_plane* planes,
                                           size_t planes_len)

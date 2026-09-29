@@ -5,6 +5,7 @@
 
 #include "tpw_log_internal.h"
 #include "tpw_stream_internal.h"
+#include "tpw_pw_dl.h"
 
 /* Matches the core connect timeout, as the filter's link does. */
 #define TPW_LINK_TIMEOUT_NSEC (5 * SPA_NSEC_PER_SEC)

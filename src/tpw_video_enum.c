@@ -11,6 +11,7 @@
 #include "tpw_log_internal.h"
 #include "tpw_pw_core_internal.h"
 #include "tpw_spa_format_internal.h"
+#include "tpw_pw_dl.h"
 
 /* Collects one node's EnumFormat results while the caller blocks on the
  * core round-trip that follows the request. */

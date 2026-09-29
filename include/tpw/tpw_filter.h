@@ -130,7 +130,7 @@ typedef struct {
  * @param name      The node's name (node.name); NULL or empty leaves PipeWire's default, the process name.
  * @param callback  Invoked once per processing cycle after tpw_filter_start().
  * @param user_data Passed unchanged to `callback`.
- * @return A new filter handle, or NULL if PipeWire cannot be reached.
+ * @return A new filter handle, or NULL if libpipewire cannot be loaded or PipeWire cannot be reached.
  */
 TPW_API tpw_filter_h tpw_filter_create(const char* name, tpw_filter_process_cb callback, void* user_data);
 

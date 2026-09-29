@@ -6,6 +6,7 @@
 #include "tpw_log_internal.h"
 #include "tpw_spa_format_internal.h"
 #include "tpw_stream_internal.h"
+#include "tpw_pw_dl.h"
 
 void tpw_stream_dmabuf_update_params(struct tpw_stream* stream)
 {

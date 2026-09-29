@@ -11,6 +11,7 @@
 
 #include "tpw_log_internal.h"
 #include "tpw_pw_core_internal.h"
+#include "tpw_pw_dl.h"
 
 /* How long tpw_pw_core_connect() waits for PipeWire to confirm the
  * connection before failing fast instead of blocking indefinitely. */
@@ -19,21 +20,31 @@
 static pthread_mutex_t g_pw_init_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int g_pw_init_count = 0;
 
-void tpw_pw_global_init(void)
+int tpw_pw_global_init(void)
 {
+    int res = 0;
     pthread_mutex_lock(&g_pw_init_mutex);
-    if (g_pw_init_count == 0)
-        pw_init(NULL, NULL);
-    g_pw_init_count++;
+    if (g_pw_init_count == 0) {
+        res = tpw_pw_dl_open();
+        if (res == 0)
+            pw_init(NULL, NULL);
+    }
+    if (res == 0)
+        g_pw_init_count++;
     pthread_mutex_unlock(&g_pw_init_mutex);
+    return res;
 }
 
 void tpw_pw_global_deinit(void)
 {
     pthread_mutex_lock(&g_pw_init_mutex);
     g_pw_init_count--;
-    if (g_pw_init_count == 0)
+    if (g_pw_init_count == 0) {
+        /* Every loop, context and stream is gone by now, so libpipewire can
+         * be unloaded along with the modules pw_deinit() just released. */
         pw_deinit();
+        tpw_pw_dl_close();
+    }
     pthread_mutex_unlock(&g_pw_init_mutex);
 }
 

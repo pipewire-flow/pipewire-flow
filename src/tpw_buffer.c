@@ -6,6 +6,7 @@
 #include "tpw_dmabuf_internal.h"
 #include "tpw_log_internal.h"
 #include "tpw_stream_internal.h"
+#include "tpw_pw_dl.h"
 
 /* Hands the current DMABUF-backed buffer to the callback with no CPU
  * data, then warns once per interval if the callback never read its

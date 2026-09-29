@@ -21,7 +21,6 @@ subdir('src')
 tinypipewire_dep = declare_dependency(
   link_with: tinypipewire_lib,
   include_directories: tpw_inc,
-  dependencies: [pipewire_dep],
 )
 
 install_headers(
@@ -38,7 +37,6 @@ pkg.generate(
   tinypipewire_lib,
   name: 'tinypipewire',
   description: 'Small wrapper around PipeWire pw_stream for audio/video capture and playback',
-  requires: 'libpipewire-0.3',
 )
 
 if get_option('tests')

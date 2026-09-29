@@ -10,6 +10,7 @@
 
 #include "tpw_filter_internal.h"
 #include "tpw_log_internal.h"
+#include "tpw_pw_dl.h"
 
 /* How long tpw_filter_port_link() waits for a link to finish negotiating
  * before giving up, matching the core connect timeout. */

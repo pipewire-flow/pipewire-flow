@@ -9,6 +9,7 @@
 #include "tpw_filter_internal.h"
 #include "tpw_log_internal.h"
 #include "tpw_spa_format_internal.h"
+#include "tpw_pw_dl.h"
 
 static void* tpw_filter_add_port_common(struct tpw_filter* filter, tpw_filter_port_direction direction,
                                          const struct spa_pod** params, uint32_t n_params,

@@ -7,6 +7,7 @@
 
 #include "tpw_log_internal.h"
 #include "tpw_stream_internal.h"
+#include "tpw_pw_dl.h"
 
 _Thread_local const struct tpw_stream* tpw_stream_processing;
 
@@ -121,7 +122,8 @@ static void tpw_stream_teardown(struct tpw_stream* stream)
 static struct tpw_stream* tpw_stream_alloc(tpw_data_type type, enum tpw_stream_direction direction,
                                             void* user_data)
 {
-    tpw_pw_global_init();
+    if (tpw_pw_global_init() < 0)
+        return NULL;
 
     struct tpw_stream* stream = calloc(1, sizeof(*stream));
     if (!stream) {

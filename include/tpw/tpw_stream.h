@@ -102,7 +102,7 @@ typedef void (*tpw_stream_error_cb)(tpw_stream_h stream, int error_code, void* u
  * @param type      TPW_DATA_AUDIO or TPW_DATA_VIDEO; SIGNAL/EVENT are rejected.
  * @param callback  Invoked with each delivered buffer once the stream is started.
  * @param user_data Passed unchanged to `callback`.
- * @return A new stream handle, or NULL if PipeWire cannot be reached or `type` is rejected.
+ * @return A new stream handle, or NULL if libpipewire cannot be loaded, PipeWire cannot be reached, or `type` is rejected.
  */
 TPW_API tpw_stream_h tpw_stream_create(tpw_data_type type, tpw_stream_data_cb callback, void* user_data);
 
@@ -118,7 +118,7 @@ TPW_API tpw_stream_h tpw_stream_create(tpw_data_type type, tpw_stream_data_cb ca
  *
  * @param callback  Invoked once per cycle to fill the next block of audio.
  * @param user_data Passed unchanged to `callback`.
- * @return A new playback stream handle, or NULL if PipeWire cannot be reached.
+ * @return A new playback stream handle, or NULL if libpipewire cannot be loaded or PipeWire cannot be reached.
  */
 TPW_API tpw_stream_h tpw_stream_create_playback(tpw_stream_playback_cb callback, void* user_data);
 

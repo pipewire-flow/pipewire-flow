@@ -1,6 +1,7 @@
 tinypipewire_sources = files(
   'tpw_log.c',
   'tpw_pw_core.c',
+  'tpw_pw_dl.c',
   'tpw_spa_format.c',
   'tpw_stream.c',
   'tpw_stream_playback.c',
@@ -20,10 +21,20 @@ tinypipewire_sources = files(
   'tpw_stream_dmabuf.c',
 )
 
+# libpipewire is opened at run time (see tpw_pw_dl.h), so the library
+# compiles against its headers but does not link it. Only its compile flags
+# are taken, which also keeps it out of the generated pkg-config file.
+pipewire_headers_dep = declare_dependency(
+  compile_args: [
+    '-I' + pipewire_dep.get_variable(pkgconfig: 'includedir') / 'pipewire-0.3',
+    '-I' + dependency('libspa-0.2').get_variable(pkgconfig: 'includedir') / 'spa-0.2',
+  ],
+)
+
 tinypipewire_lib = library('tinypipewire',
   tinypipewire_sources,
   include_directories: tpw_inc,
-  dependencies: [pipewire_dep, dependency('threads')],
+  dependencies: [pipewire_headers_dep, dependency('dl'), dependency('threads')],
   gnu_symbol_visibility: 'hidden',
   soversion: meson.project_version().split('.')[0],
   install: true,

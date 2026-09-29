@@ -123,12 +123,14 @@ int tpw_pw_enum_video_formats(struct tpw_pw_core_conn* conn, struct tpw_pw_regis
                                uint32_t node_id, tpw_video_format_info* out, size_t out_len,
                                size_t* found);
 
-/* Increments the process-wide pw_init() refcount, calling pw_init() on
- * the first call. Must be paired with tpw_pw_global_deinit(). */
-void tpw_pw_global_init(void);
+/* Increments the process-wide refcount, loading libpipewire and calling
+ * pw_init() on the first call. 0 on success, negative when libpipewire
+ * cannot be loaded (logged), in which case nothing is counted. A success
+ * must be paired with tpw_pw_global_deinit(). */
+int tpw_pw_global_init(void);
 
-/* Decrements the process-wide pw_init() refcount, calling pw_deinit()
- * when it reaches zero. */
+/* Decrements the process-wide refcount; at zero calls pw_deinit() and
+ * unloads libpipewire. */
 void tpw_pw_global_deinit(void);
 
 /* Starts a thread-loop, creates a context on it, and connects a core,

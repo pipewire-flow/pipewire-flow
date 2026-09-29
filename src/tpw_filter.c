@@ -10,6 +10,7 @@
 #include "tpw_filter_internal.h"
 #include "tpw_log_internal.h"
 #include "tpw_spa_format_internal.h"
+#include "tpw_pw_dl.h"
 
 /* How long tpw_filter_stop(..., true) waits for a flush to actually drain
  * before giving up and stopping anyway. */
@@ -155,7 +156,8 @@ tpw_filter_h tpw_filter_create(const char* name, tpw_filter_process_cb callback,
     if (!callback)
         return NULL;
 
-    tpw_pw_global_init();
+    if (tpw_pw_global_init() < 0)
+        return NULL;
 
     struct tpw_filter* filter = calloc(1, sizeof(*filter));
     if (!filter) {

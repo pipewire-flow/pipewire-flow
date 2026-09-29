@@ -4,6 +4,7 @@
 
 #include "tpw_log_internal.h"
 #include "tpw_stream_internal.h"
+#include "tpw_pw_dl.h"
 
 bool tpw_stream_playback_note_overrun(struct tpw_stream* stream, uint64_t now_ns)
 {

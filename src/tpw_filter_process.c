@@ -7,6 +7,7 @@
 
 #include "tpw_dmabuf_internal.h"
 #include "tpw_filter_internal.h"
+#include "tpw_pw_dl.h"
 
 #define TPW_FILTER_STACK_PORTS 8
 

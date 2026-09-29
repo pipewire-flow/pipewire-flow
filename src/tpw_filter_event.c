@@ -9,6 +9,7 @@
 #include <spa/pod/iter.h>
 
 #include "tpw_filter_internal.h"
+#include "tpw_pw_dl.h"
 
 struct tpw_property_entry {
     const char* name;
