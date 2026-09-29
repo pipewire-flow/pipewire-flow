@@ -14,6 +14,10 @@ instead — which is what a filter's output port already does.
 
 Requires [Meson](https://mesonbuild.com/), Ninja, and PipeWire development
 files (`libpipewire-0.3` >= 0.3.50) discoverable via pkg-config.
+Only PipeWire's headers are used at build time: the library does not link
+`libpipewire`, but opens it when the first stream or filter is created and
+unloads it once the last one is destroyed (see
+[Footprint](#footprint)).
 
 ```sh
 meson setup build
@@ -177,7 +181,7 @@ between, so `--pixel-format` only accepts what the source itself offers. The
 default `YUYV` and `MJPG` are the usual safe picks for UVC webcams; an
 unsupported format ends the stream with `source lost (error -5)`.
 
-## PipeWire client configuration
+## Footprint
 
 A stream or filter does not read PipeWire's `client.conf`. Its context loads
 only the modules a client needs — the native protocol, client-node and
@@ -194,6 +198,14 @@ PIPEWIRE_CONFIG_NAME=client.conf ./my-app
 
 A PipeWire too old to build a context without a file falls back to its
 `client.conf` on its own.
+
+`libpipewire` itself is opened with `dlopen()` when the first stream or
+filter is created and closed after the last one is destroyed, together with
+the modules and plugins it loaded. A process that links tinypipewire maps
+nothing of PipeWire until then, 340–380 KiB of PSS less than linking
+`libpipewire` would cost, and gets about 500 KiB back once it stops. It also
+starts on a system without PipeWire: creating a stream or filter returns
+NULL and logs why.
 
 `bench/footprint.sh` measures what a process pulls in — threads, file
 descriptors, sockets, shared objects, memory and daemon clients — through
