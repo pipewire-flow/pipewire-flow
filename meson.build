@@ -55,3 +55,7 @@ endif
 if get_option('utils')
   subdir('utils')
 endif
+
+if get_option('bench')
+  subdir('bench')
+endif

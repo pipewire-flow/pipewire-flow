@@ -1,3 +1,4 @@
 option('examples', type: 'boolean', value: true, description: 'Build example programs')
 option('tests', type: 'boolean', value: true, description: 'Build and run unit tests')
 option('utils', type: 'boolean', value: true, description: 'Build command-line utility programs')
+option('bench', type: 'boolean', value: true, description: 'Build the footprint comparison programs')
