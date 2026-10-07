@@ -1,4 +1,4 @@
-project('tinypipewire', 'c',
+project('pipewire-flow', 'c',
   version: '0.11.0',
   license: 'MIT',
   default_options: [
@@ -18,8 +18,8 @@ tpw_inc = include_directories('include')
 subdir('include/tpw')
 subdir('src')
 
-tinypipewire_dep = declare_dependency(
-  link_with: tinypipewire_lib,
+pipewire_flow_dep = declare_dependency(
+  link_with: pipewire_flow_lib,
   include_directories: tpw_inc,
   dependencies: [pipewire_dep],
 )
@@ -35,9 +35,9 @@ install_headers(
 
 pkg = import('pkgconfig')
 pkg.generate(
-  tinypipewire_lib,
-  name: 'tinypipewire',
-  description: 'Small wrapper around PipeWire pw_stream for audio/video capture and playback',
+  pipewire_flow_lib,
+  name: 'pipewire-flow',
+  description: 'PipeWire audio/video capture, playback and multi-port filters',
   requires: 'libpipewire-0.3',
 )
 

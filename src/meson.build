@@ -1,4 +1,4 @@
-tinypipewire_sources = files(
+pipewire_flow_sources = files(
   'tpw_log.c',
   'tpw_pw_core.c',
   'tpw_spa_format.c',
@@ -20,8 +20,8 @@ tinypipewire_sources = files(
   'tpw_stream_dmabuf.c',
 )
 
-tinypipewire_lib = library('tinypipewire',
-  tinypipewire_sources,
+pipewire_flow_lib = library('pipewire-flow',
+  pipewire_flow_sources,
   include_directories: tpw_inc,
   dependencies: [pipewire_dep, dependency('threads')],
   gnu_symbol_visibility: 'hidden',
