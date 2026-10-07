@@ -11,7 +11,7 @@
 #include "pwf_filter_internal.h"
 #include "pwf_test.h"
 
-static const pwf_audio_config g_cfg = { .sample_rate = 48000, .channels = 2 };
+static const struct pwf_audio_config g_cfg = { .sample_rate = 48000, .channels = 2 };
 
 /* --- marker is set during the callback and restored after ------------- */
 
@@ -19,7 +19,7 @@ static struct pwf_filter* g_expect;
 static const struct pwf_filter* g_seen;
 static int g_marker_calls;
 
-static void marker_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
+static void marker_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     (void)buffers;
     (void)n;
@@ -31,7 +31,7 @@ static void marker_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size
 
 static void test_marker_set_and_restored(void)
 {
-    pwf_filter_h handle = pwf_filter_create("pwf-test-cb-marker", marker_cb, NULL);
+    struct pwf_filter* handle = pwf_filter_create("pwf-test-cb-marker", marker_cb, NULL);
     PWF_ASSERT(handle != NULL);
     PWF_ASSERT(pwf_filter_add_audio_port(handle, PWF_FILTER_PORT_INPUT, &g_cfg) != NULL);
 
@@ -58,7 +58,7 @@ static struct pwf_filter* g_inner;
 static const struct pwf_filter* g_seen_inner;
 static const struct pwf_filter* g_seen_after_inner;
 
-static void inner_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
+static void inner_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     (void)filter;
     (void)buffers;
@@ -67,7 +67,7 @@ static void inner_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_
     g_seen_inner = pwf_filter_processing;
 }
 
-static void outer_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
+static void outer_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     (void)filter;
     (void)buffers;
@@ -79,8 +79,8 @@ static void outer_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_
 
 static void test_nested_filter_restores_outer(void)
 {
-    pwf_filter_h outer_h = pwf_filter_create("pwf-test-cb-outer", outer_cb, NULL);
-    pwf_filter_h inner_h = pwf_filter_create("pwf-test-cb-inner", inner_cb, NULL);
+    struct pwf_filter* outer_h = pwf_filter_create("pwf-test-cb-outer", outer_cb, NULL);
+    struct pwf_filter* inner_h = pwf_filter_create("pwf-test-cb-inner", inner_cb, NULL);
     PWF_ASSERT(outer_h != NULL && inner_h != NULL);
     PWF_ASSERT(pwf_filter_add_audio_port(outer_h, PWF_FILTER_PORT_INPUT, &g_cfg) != NULL);
     PWF_ASSERT(pwf_filter_add_audio_port(inner_h, PWF_FILTER_PORT_INPUT, &g_cfg) != NULL);
@@ -103,12 +103,12 @@ static void test_nested_filter_restores_outer(void)
 
 /* --- push_port_data from inside the callback ------------------------- */
 
-static pwf_filter_port_h g_push_port;
+static struct pwf_filter_port* g_push_port;
 static int g_push_result = 1;      /* 1 = never attempted */
 static int g_push_cycles;
 static float g_delivered = -1.0f;
 
-static void push_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
+static void push_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     (void)user_data;
     g_push_cycles++;
@@ -128,7 +128,7 @@ static void push_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t
 
 static void test_push_port_data_from_callback(void)
 {
-    pwf_filter_h handle = pwf_filter_create("pwf-test-cb-push", push_cb, NULL);
+    struct pwf_filter* handle = pwf_filter_create("pwf-test-cb-push", push_cb, NULL);
     PWF_ASSERT(handle != NULL);
     g_push_port = pwf_filter_add_signal_port(handle, PWF_FILTER_PORT_INPUT);
     PWF_ASSERT(g_push_port != NULL);
@@ -149,10 +149,10 @@ static void test_push_port_data_from_callback(void)
 /* --- pushing to a different filter still locks normally --------------- */
 
 static struct pwf_filter* g_other;
-static pwf_filter_port_h g_other_port;
+static struct pwf_filter_port* g_other_port;
 static int g_cross_result = 1;
 
-static void cross_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
+static void cross_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     (void)filter;
     (void)buffers;
@@ -162,14 +162,14 @@ static void cross_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_
         float v = 1.5f;
         /* A different filter's loop is not the one running us, so this one
          * does take its lock — it must still succeed and not hang. */
-        g_cross_result = pwf_filter_push_port_data((pwf_filter_h)g_other, g_other_port, &v, sizeof(v), -1);
+        g_cross_result = pwf_filter_push_port_data(g_other, g_other_port, &v, sizeof(v), -1);
     }
 }
 
 static void test_push_to_other_filter_from_callback(void)
 {
-    pwf_filter_h driver = pwf_filter_create("pwf-test-cb-cross-a", cross_cb, NULL);
-    pwf_filter_h other = pwf_filter_create("pwf-test-cb-cross-b", marker_cb, NULL);
+    struct pwf_filter* driver = pwf_filter_create("pwf-test-cb-cross-a", cross_cb, NULL);
+    struct pwf_filter* other = pwf_filter_create("pwf-test-cb-cross-b", marker_cb, NULL);
     PWF_ASSERT(driver != NULL && other != NULL);
     PWF_ASSERT(pwf_filter_add_signal_port(driver, PWF_FILTER_PORT_INPUT) != NULL);
     g_other_port = pwf_filter_add_signal_port(other, PWF_FILTER_PORT_INPUT);
@@ -185,7 +185,7 @@ static void test_push_to_other_filter_from_callback(void)
 
 /* --- app-thread pushes still work while the filter runs --------------- */
 
-static void quiet_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
+static void quiet_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     (void)filter;
     (void)buffers;
@@ -195,9 +195,9 @@ static void quiet_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_
 
 static void test_app_thread_push_still_works(void)
 {
-    pwf_filter_h handle = pwf_filter_create("pwf-test-cb-appthread", quiet_cb, NULL);
+    struct pwf_filter* handle = pwf_filter_create("pwf-test-cb-appthread", quiet_cb, NULL);
     PWF_ASSERT(handle != NULL);
-    pwf_filter_port_h in = pwf_filter_add_signal_port(handle, PWF_FILTER_PORT_INPUT);
+    struct pwf_filter_port* in = pwf_filter_add_signal_port(handle, PWF_FILTER_PORT_INPUT);
     PWF_ASSERT(in != NULL);
     PWF_ASSERT_EQ(pwf_filter_start(handle), PWF_OK);
 

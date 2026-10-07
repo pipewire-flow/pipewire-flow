@@ -8,8 +8,8 @@
 /* Two signal input ports: one with hold enabled, one without. The process
  * callback fires continuously once started; counters are cumulative and
  * monotonic so they can be read from the main thread without resetting. */
-static pwf_filter_port_h g_hold_port;
-static pwf_filter_port_h g_nohold_port;
+static struct pwf_filter_port* g_hold_port;
+static struct pwf_filter_port* g_nohold_port;
 
 static int g_hold_fresh;       /* new-data deliveries on the hold port */
 static int g_hold_held;        /* held re-presentations on the hold port */
@@ -22,12 +22,13 @@ static int64_t g_hold_held_pts;
 static int g_nohold_fresh;
 static int g_nohold_held;      /* MUST stay 0: hold is opt-in */
 
-static void process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers, void* user_data)
+static void process_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
+                       void* user_data)
 {
     (void)filter;
     (void)user_data;
     for (size_t i = 0; i < n_buffers; i++) {
-        pwf_filter_port_buffer* b = &buffers[i];
+        struct pwf_filter_port_buffer* b = &buffers[i];
         bool is_hold = (b->port == g_hold_port);
 
         if (!b->data) {
@@ -57,7 +58,7 @@ static void process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, siz
 
 int main(void)
 {
-    pwf_filter_h filter = pwf_filter_create("pwf-test-hold", process_cb, NULL);
+    struct pwf_filter* filter = pwf_filter_create("pwf-test-hold", process_cb, NULL);
     PWF_ASSERT(filter != NULL);
 
     g_hold_port = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);

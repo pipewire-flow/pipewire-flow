@@ -36,7 +36,7 @@ struct counters {
 
 /* Writes a full cycle of a cheap square wave: audible, and trivial enough
  * to stay well inside the cycle budget on any machine. */
-static void on_fill(pwf_stream_h stream, pwf_stream_playback_buffer* buf, void* user_data)
+static void on_fill(struct pwf_stream* stream, struct pwf_stream_playback_buffer* buf, void* user_data)
 {
     (void)stream;
     struct counters* c = user_data;
@@ -69,7 +69,7 @@ static void on_fill(pwf_stream_h stream, pwf_stream_playback_buffer* buf, void* 
     }
 }
 
-static void on_error(pwf_stream_h stream, int error_code, void* user_data)
+static void on_error(struct pwf_stream* stream, int error_code, void* user_data)
 {
     (void)stream;
     struct counters* c = user_data;
@@ -87,16 +87,16 @@ int main(void)
 
     struct counters c = { .last_pts = -1 };
 
-    pwf_stream_h stream = pwf_stream_create_playback(on_fill, &c);
+    struct pwf_stream* stream = pwf_stream_create_playback(on_fill, &c);
     if (!stream) {
         printf("no PipeWire connection, skipping\n");
         return TEST_SKIP;
     }
 
-    PWF_ASSERT_EQ(pwf_stream_set_error_cb(stream, on_error), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_error_callback(stream, on_error), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_set_target(stream, sink), PWF_OK);
 
-    pwf_audio_config cfg = { .sample_rate = RATE, .channels = CHANNELS, .format = "S16" };
+    struct pwf_audio_config cfg = { .sample_rate = RATE, .channels = CHANNELS, .format = "S16" };
     PWF_ASSERT_EQ(pwf_stream_set_audio_config(stream, &cfg), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_start(stream), PWF_OK);
 

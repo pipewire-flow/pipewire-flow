@@ -89,10 +89,10 @@ static const char* find_sensor(void)
 
 struct bundle {
     const char* sensor;
-    pwf_filter_h filter;
-    pwf_filter_port_h video;
-    pwf_filter_port_h mic;
-    pwf_filter_port_h temp;
+    struct pwf_filter* filter;
+    struct pwf_filter_port* video;
+    struct pwf_filter_port* mic;
+    struct pwf_filter_port* temp;
 
     unsigned cycles;
     unsigned video_fresh;   /* a new camera frame arrived */
@@ -111,17 +111,17 @@ struct bundle {
     unsigned sampled;       /* samples the sensor thread produced */
 };
 
-static void on_process(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
+static void on_process(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     struct bundle* b = user_data;
     (void)filter;
     b->cycles++;
 
     for (size_t i = 0; i < n; i++) {
-        pwf_filter_port_buffer* buf = &buffers[i];
+        struct pwf_filter_port_buffer* buf = &buffers[i];
 
         if (buf->port == b->video) {
-            pwf_dmabuf_plane plane;
+            struct pwf_dmabuf_plane plane;
             if (pwf_filter_port_get_dmabuf_planes(buf, &plane, 1) > 0) {
                 if (buf->fresh) {
                     b->video_fresh++;
@@ -185,11 +185,11 @@ static void run_bundle(const char* camera, const char* mic, const char* sensor, 
 {
     struct bundle b = { .sensor = sensor, .held_fd = -1, .last_celsius = -1.0f };
 
-    pwf_filter_h filter = pwf_filter_create("pwf-hw-bundle", on_process, &b);
+    struct pwf_filter* filter = pwf_filter_create("pwf-hw-bundle", on_process, &b);
     PWF_ASSERT(filter != NULL);
 
-    pwf_video_config vcfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
-    pwf_filter_port_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_video_config vcfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
+    struct pwf_filter_port_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
     b.video = pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &vcfg, &opts);
     b.mic = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
     b.temp = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);

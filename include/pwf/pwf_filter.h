@@ -21,16 +21,16 @@ extern "C" {
 #endif
 
 /** @brief Opaque handle to one multi-port filter. */
-typedef struct pwf_filter* pwf_filter_h;
+struct pwf_filter;
 
 /** @brief Opaque handle to one input or output port on a filter. */
-typedef struct pwf_filter_port* pwf_filter_port_h;
+struct pwf_filter_port;
 
 /** @brief Direction of a filter port. */
-typedef enum {
+enum pwf_filter_port_direction {
     PWF_FILTER_PORT_INPUT  = 0, /**< Consumes data delivered by the graph, or pushed with pwf_filter_push_port_data()/pwf_filter_port_push_event(). */
     PWF_FILTER_PORT_OUTPUT = 1  /**< Produces data for the graph, written from the processing callback. */
-} pwf_filter_port_direction;
+};
 
 /**
  * @brief One port's buffer for a single processing cycle.
@@ -38,15 +38,15 @@ typedef enum {
  * `data`/`size`/`capacity`/`pts` are valid only for the duration of the
  * process callback.
  */
-typedef struct {
-    pwf_filter_port_h port; /**< Which port this entry describes. */
+struct pwf_filter_port_buffer {
+    struct pwf_filter_port* port; /**< Which port this entry describes. */
     void* data;   /**< NULL if no buffer was available this cycle. */
     size_t size;  /**< Input: bytes available to read. Output: bytes to publish; set by the callback before returning (0 = no output this cycle). */
     size_t capacity; /**< Output ports only: max bytes `data` can hold. */
-    int64_t pts; /**< Input ports only: capture/presentation timestamp in nanoseconds from the source (e.g. an ALSA/V4L2 device's driver clock), or the value passed to pwf_filter_push_port_data() for pushed data. -1 if unavailable. Always -1 on output ports and on event ports (each pwf_event carries its own `offset` instead). */
+    int64_t pts; /**< Input ports only: capture/presentation timestamp in nanoseconds from the source (e.g. an ALSA/V4L2 device's driver clock), or the value passed to pwf_filter_push_port_data() for pushed data. -1 if unavailable. Always -1 on output ports and on event ports (each struct pwf_event carries its own `offset` instead). */
     bool fresh;  /**< Input ports only: true only when this buffer is new this cycle; false for a held re-presentation (see pwf_filter_port_set_hold()) or a cycle with no buffer. Always false on output ports. */
     uint64_t seq; /**< Input ports only: per-port update counter that advances only when new data arrives, so it is unchanged across held cycles and its deltas count genuinely new buffers. */
-} pwf_filter_port_buffer;
+};
 
 /**
  * @brief Invoked once per processing cycle with every port's buffer.
@@ -62,8 +62,8 @@ typedef struct {
  * @param n_buffers Number of entries in `buffers`.
  * @param user_data The pointer passed to pwf_filter_create().
  */
-typedef void (*pwf_filter_process_cb)(pwf_filter_h filter, pwf_filter_port_buffer* buffers,
-                                       size_t n_buffers, void* user_data);
+typedef void (*pwf_filter_process_func_t)(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers,
+                                           size_t n_buffers, void* user_data);
 
 /**
  * @brief Reports that `port` on `filter` became unavailable while
@@ -78,11 +78,11 @@ typedef void (*pwf_filter_process_cb)(pwf_filter_h filter, pwf_filter_port_buffe
  *
  * @param filter     The filter owning `port`.
  * @param port       The port that became unavailable.
- * @param error_code A pwf_error, currently always PWF_ERR_SOURCE_UNAVAILABLE.
+ * @param error_code An enum pwf_error, currently always PWF_ERR_SOURCE_UNAVAILABLE.
  * @param user_data  The pointer passed to pwf_filter_create().
  */
-typedef void (*pwf_filter_error_cb)(pwf_filter_h filter, pwf_filter_port_h port, int error_code,
-                                     void* user_data);
+typedef void (*pwf_filter_error_func_t)(struct pwf_filter* filter, struct pwf_filter_port* port, int error_code,
+                                         void* user_data);
 
 /**
  * @brief Which real wire kind an event carries.
@@ -96,12 +96,12 @@ typedef void (*pwf_filter_error_cb)(pwf_filter_h filter, pwf_filter_port_h port,
  * `size` are that item's raw, undecoded value bytes, and `key` is NULL.
  * Passing UNKNOWN to pwf_filter_port_push_event() is rejected.
  */
-typedef enum {
+enum pwf_event_kind {
     PWF_EVENT_MIDI     = 0, /**< Real MIDI wire bytes. */
     PWF_EVENT_OSC      = 1, /**< Real OSC wire bytes. */
     PWF_EVENT_PROPERTY = 2, /**< General-purpose named value; `key` selects it. */
     PWF_EVENT_UNKNOWN  = 3  /**< Read-only: an undecoded control item from another client. */
-} pwf_event_kind;
+};
 
 /**
  * @brief One discrete, time-stamped item exchanged through an event port.
@@ -113,13 +113,13 @@ typedef enum {
  * pwf_filter_port_push_event() (the library copies what it needs from a
  * pushed event).
  */
-typedef struct {
+struct pwf_event {
     uint32_t offset;     /**< This event's position within the current cycle, in frames. */
-    pwf_event_kind kind; /**< MIDI, OSC, PROPERTY, or (read-only) UNKNOWN. */
+    enum pwf_event_kind kind; /**< MIDI, OSC, PROPERTY, or (read-only) UNKNOWN. */
     const char* key;     /**< Property name for PWF_EVENT_PROPERTY; NULL otherwise. */
     const void* data;   /**< MIDI/OSC: real wire-format bytes. PROPERTY: the value's raw bytes. UNKNOWN: the raw undecoded control value's bytes. */
     size_t size;        /**< Bytes at `data`. */
-} pwf_event;
+};
 
 /**
  * @brief Creates an empty filter (no ports yet) whose node other
@@ -132,7 +132,7 @@ typedef struct {
  * @param user_data Passed unchanged to `callback`.
  * @return A new filter handle, or NULL if PipeWire cannot be reached.
  */
-PWF_API pwf_filter_h pwf_filter_create(const char* name, pwf_filter_process_cb callback, void* user_data);
+PWF_API struct pwf_filter* pwf_filter_create(const char* name, pwf_filter_process_func_t callback, void* user_data);
 
 /**
  * @brief Registers (or clears, with NULL) the optional per-port
@@ -141,7 +141,7 @@ PWF_API pwf_filter_h pwf_filter_create(const char* name, pwf_filter_process_cb c
  * @param callback The callback to invoke on port loss, or NULL to clear it.
  * @return PWF_OK, or PWF_ERR_INVALID_ARG for a NULL `filter`.
  */
-PWF_API int pwf_filter_set_error_cb(pwf_filter_h filter, pwf_filter_error_cb callback);
+PWF_API int pwf_filter_set_error_callback(struct pwf_filter* filter, pwf_filter_error_func_t callback);
 
 /**
  * @brief Adds one audio port (input or output) to `filter`.
@@ -154,8 +154,9 @@ PWF_API int pwf_filter_set_error_cb(pwf_filter_h filter, pwf_filter_error_cb cal
  * @param config    The requested sample rate, channel count, and sample format.
  * @return The new port handle, or NULL on invalid arguments or an unsupported format.
  */
-PWF_API pwf_filter_port_h pwf_filter_add_audio_port(pwf_filter_h filter, pwf_filter_port_direction direction,
-                                                     const pwf_audio_config* config);
+PWF_API struct pwf_filter_port* pwf_filter_add_audio_port(struct pwf_filter* filter,
+                                                          enum pwf_filter_port_direction direction,
+                                                          const struct pwf_audio_config* config);
 
 /**
  * @brief Lists the video formats `target` can deliver to a port on `filter`.
@@ -174,8 +175,8 @@ PWF_API pwf_filter_port_h pwf_filter_add_audio_port(pwf_filter_h filter, pwf_fil
  * @param[out] found   The format count actually available, which may exceed `out_len` if it was too small; 0 on failure. A device reporting no format this library can name is PWF_OK with 0, not an error.
  * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL filter, target or `found`, PWF_ERR_NOT_FOUND for a target naming no node, PWF_ERR_IN_CALLBACK from inside a callback, PWF_ERR_TIMEOUT when the query does not answer in time, or PWF_ERR_CONNECT_FAILED when it fails.
  */
-PWF_API int pwf_filter_get_target_video_formats(pwf_filter_h filter, const char* target,
-                                                 pwf_video_format_info* out, size_t out_len,
+PWF_API int pwf_filter_get_target_video_formats(struct pwf_filter* filter, const char* target,
+                                                 struct pwf_video_format_info* out, size_t out_len,
                                                  size_t* found);
 
 /**
@@ -188,20 +189,21 @@ PWF_API int pwf_filter_get_target_video_formats(pwf_filter_h filter, const char*
  * @param config    The requested width, height, pixel format, and frame rate.
  * @return The new port handle, or NULL on invalid arguments or an unsupported format.
  */
-PWF_API pwf_filter_port_h pwf_filter_add_video_port(pwf_filter_h filter, pwf_filter_port_direction direction,
-                                                     const pwf_video_config* config);
+PWF_API struct pwf_filter_port* pwf_filter_add_video_port(struct pwf_filter* filter,
+                                                          enum pwf_filter_port_direction direction,
+                                                          const struct pwf_video_config* config);
 
 /**
  * @brief Extensible per-port options.
  *
  * A NULL or zeroed struct means AUTO, i.e. the behavior of the non-_ex
- * add call. pwf_port_memory is declared in pwf_stream.h, shared with
+ * add call. enum pwf_port_memory is declared in pwf_stream.h, shared with
  * pwf_stream_get_dmabuf_planes().
  */
-typedef struct {
-    pwf_port_memory memory; /**< AUTO (default) or DMABUF. */
-    uint32_t reserved[2];   /**< Must be zero; reserved for future options. */
-} pwf_filter_port_opts;
+struct pwf_filter_port_opts {
+    enum pwf_port_memory memory; /**< AUTO (default) or DMABUF. */
+    uint32_t reserved[2];        /**< Must be zero; reserved for future options. */
+};
 
 /**
  * @brief Adds one video port with options.
@@ -217,9 +219,10 @@ typedef struct {
  * @param opts      Per-port options, or NULL for AUTO.
  * @return The new port handle, or NULL for DMABUF on an output port or an unsupported/invalid request.
  */
-PWF_API pwf_filter_port_h pwf_filter_add_video_port_ex(pwf_filter_h filter, pwf_filter_port_direction direction,
-                                                        const pwf_video_config* config,
-                                                        const pwf_filter_port_opts* opts);
+PWF_API struct pwf_filter_port* pwf_filter_add_video_port_ex(struct pwf_filter* filter,
+                                                             enum pwf_filter_port_direction direction,
+                                                             const struct pwf_video_config* config,
+                                                             const struct pwf_filter_port_opts* opts);
 
 /**
  * @brief Fills up to `planes_len` entries of `planes` with the current
@@ -230,13 +233,13 @@ PWF_API pwf_filter_port_h pwf_filter_add_video_port_ex(pwf_filter_h filter, pwf_
  * and its capacity adjacent even though `planes` is the out-parameter
  * here.
  *
- * @param[in]  buf        The port buffer to read, from this cycle's pwf_filter_process_cb.
+ * @param[in]  buf        The port buffer to read, from this cycle's pwf_filter_process_func_t.
  * @param[out] planes     Filled with up to `planes_len` planes, most-significant plane first.
  * @param[in]  planes_len Capacity of `planes`.
  * @return The plane count actually available, which may exceed `planes_len` if it was too small; 0 for a non-DMABUF port or a cycle with no buffer, and `planes` is left unwritten.
  */
-PWF_API size_t pwf_filter_port_get_dmabuf_planes(const pwf_filter_port_buffer* buf,
-                                                  pwf_dmabuf_plane* planes, size_t planes_len);
+PWF_API size_t pwf_filter_port_get_dmabuf_planes(const struct pwf_filter_port_buffer* buf,
+                                                  struct pwf_dmabuf_plane* planes, size_t planes_len);
 
 /**
  * @brief Enables (or disables) single-buffer "hold" on an input `port`.
@@ -250,7 +253,7 @@ PWF_API size_t pwf_filter_port_get_dmabuf_planes(const pwf_filter_port_buffer* b
  * @param enable true to re-present the last buffer on an empty cycle, false to report no buffer instead.
  * @return PWF_OK, or PWF_ERR_INVALID_ARG for a NULL or output port, or a filter already started.
  */
-PWF_API int pwf_filter_port_set_hold(pwf_filter_port_h port, bool enable);
+PWF_API int pwf_filter_port_set_hold(struct pwf_filter_port* port, bool enable);
 
 /**
  * @brief Records a preferred maximum bundling period in nanoseconds,
@@ -264,7 +267,7 @@ PWF_API int pwf_filter_port_set_hold(pwf_filter_port_h port, bool enable);
  * @param max_period_ns Preferred maximum bundling period in nanoseconds, or 0 to clear the hint.
  * @return PWF_OK, or PWF_ERR_INVALID_ARG for a NULL filter or one already started.
  */
-PWF_API int pwf_filter_set_period_hint(pwf_filter_h filter, uint32_t max_period_ns);
+PWF_API int pwf_filter_set_period_hint(struct pwf_filter* filter, uint32_t max_period_ns);
 
 /**
  * @brief Links an input `port` straight to a source node, needing no
@@ -276,18 +279,18 @@ PWF_API int pwf_filter_set_period_hint(pwf_filter_h filter, uint32_t max_period_
  *
  * @param port   An input port on a started filter.
  * @param target A node name, an object.serial, or "node:port"; naming only a node lets PipeWire pick a compatible port.
- * @return PWF_OK, or a pwf_error: NOT_CONFIGURED before start, INVALID_ARG for a bad port or target string or an already-linked port, NOT_FOUND for a target naming no node or port, IN_CALLBACK from inside a callback, INVALID_FORMAT when the link fails to negotiate, TIMEOUT when it does not negotiate in time, NO_MEMORY when an allocation fails, CONNECT_FAILED when the link cannot be created.
+ * @return PWF_OK, or an enum pwf_error: NOT_CONFIGURED before start, INVALID_ARG for a bad port or target string or an already-linked port, NOT_FOUND for a target naming no node or port, IN_CALLBACK from inside a callback, INVALID_FORMAT when the link fails to negotiate, TIMEOUT when it does not negotiate in time, NO_MEMORY when an allocation fails, CONNECT_FAILED when the link cannot be created.
  */
-PWF_API int pwf_filter_port_link(pwf_filter_port_h port, const char* target);
+PWF_API int pwf_filter_port_link(struct pwf_filter_port* port, const char* target);
 
 /**
  * @brief Releases the link created on `port`, which is only needed to
  *        re-target it while running; stop and destroy release every
  *        link themselves.
  * @param port The linked port to unlink.
- * @return PWF_OK, or a pwf_error when the port has no link or the call comes from the process callback.
+ * @return PWF_OK, or an enum pwf_error when the port has no link or the call comes from the process callback.
  */
-PWF_API int pwf_filter_port_unlink(pwf_filter_port_h port);
+PWF_API int pwf_filter_port_unlink(struct pwf_filter_port* port);
 
 /**
  * @brief Adds one signal port (input or output) to `filter` — a
@@ -302,11 +305,12 @@ PWF_API int pwf_filter_port_unlink(pwf_filter_port_h port);
  * @param direction PWF_FILTER_PORT_INPUT or PWF_FILTER_PORT_OUTPUT.
  * @return The new port handle, or NULL on invalid arguments.
  */
-PWF_API pwf_filter_port_h pwf_filter_add_signal_port(pwf_filter_h filter, pwf_filter_port_direction direction);
+PWF_API struct pwf_filter_port* pwf_filter_add_signal_port(struct pwf_filter* filter,
+                                                           enum pwf_filter_port_direction direction);
 
 /**
  * @brief Adds one event port (input or output) to `filter` — carries
- *        zero or more discrete pwf_event items per processing cycle
+ *        zero or more discrete struct pwf_event items per processing cycle
  *        instead of a raw buffer.
  *
  * No format configuration is needed. Same timing and failure behavior
@@ -316,7 +320,8 @@ PWF_API pwf_filter_port_h pwf_filter_add_signal_port(pwf_filter_h filter, pwf_fi
  * @param direction PWF_FILTER_PORT_INPUT or PWF_FILTER_PORT_OUTPUT.
  * @return The new port handle, or NULL on invalid arguments.
  */
-PWF_API pwf_filter_port_h pwf_filter_add_event_port(pwf_filter_h filter, pwf_filter_port_direction direction);
+PWF_API struct pwf_filter_port* pwf_filter_add_event_port(struct pwf_filter* filter,
+                                                          enum pwf_filter_port_direction direction);
 
 /**
  * @brief Returns the media kind `port` was added with (AUDIO/VIDEO/
@@ -325,9 +330,9 @@ PWF_API pwf_filter_port_h pwf_filter_add_event_port(pwf_filter_h filter, pwf_fil
  * Valid for any port handle obtained from any add_*_port() call.
  *
  * @param port The port to query.
- * @return The pwf_data_type `port` was added as.
+ * @return The enum pwf_data_type `port` was added as.
  */
-PWF_API pwf_data_type pwf_filter_port_get_type(pwf_filter_port_h port);
+PWF_API enum pwf_data_type pwf_filter_port_get_type(struct pwf_filter_port* port);
 
 /**
  * @brief Returns the number of events available on `port` (an input
@@ -338,7 +343,7 @@ PWF_API pwf_data_type pwf_filter_port_get_type(pwf_filter_port_h port);
  * @param port An input event port.
  * @return The event count for this cycle; 0 if none.
  */
-PWF_API size_t pwf_filter_port_get_event_count(pwf_filter_port_h port);
+PWF_API size_t pwf_filter_port_get_event_count(struct pwf_filter_port* port);
 
 /**
  * @brief Reads the event at `index` (0-based, cycle-delivery order) on
@@ -351,9 +356,9 @@ PWF_API size_t pwf_filter_port_get_event_count(pwf_filter_port_h port);
  * @param[in]  port  An input event port.
  * @param[in]  index 0-based index into this cycle's delivered events.
  * @param[out] out   Filled with the event at `index`.
- * @return PWF_OK, or a pwf_error (invalid index, or wrong port kind/direction).
+ * @return PWF_OK, or an enum pwf_error (invalid index, or wrong port kind/direction).
  */
-PWF_API int pwf_filter_port_get_event(pwf_filter_port_h port, size_t index, pwf_event* out);
+PWF_API int pwf_filter_port_get_event(struct pwf_filter_port* port, size_t index, struct pwf_event* out);
 
 /**
  * @brief Adds one event to `port`'s event queue; the library copies
@@ -375,7 +380,7 @@ PWF_API int pwf_filter_port_get_event(pwf_filter_port_h port, size_t index, pwf_
  * @param event The event to copy and enqueue.
  * @return PWF_OK, PWF_ERR_INVALID_ARG (wrong port kind, an invalid/unrecognized PROPERTY key, or — output ports only — no room left in the current cycle's buffer), or PWF_ERR_NO_MEMORY when the event cannot be copied.
  */
-PWF_API int pwf_filter_port_push_event(pwf_filter_port_h port, const pwf_event* event);
+PWF_API int pwf_filter_port_push_event(struct pwf_filter_port* port, const struct pwf_event* event);
 
 /**
  * @brief Stages `size` bytes from `data` for `port` (an input port) to
@@ -392,11 +397,11 @@ PWF_API int pwf_filter_port_push_event(pwf_filter_port_h port, const pwf_event* 
  * @param port   An input, non-event port on `filter`.
  * @param data   Bytes to stage; copied by the library.
  * @param size   Bytes at `data`.
- * @param pts    Carried through unchanged to that cycle's pwf_filter_port_buffer.pts; pass -1 if the source has no timestamp (e.g. pwf_stream_data_cb's own `pts` when bridging a capture stream into a filter).
+ * @param pts    Carried through unchanged to that cycle's pwf_filter_port_buffer.pts; pass -1 if the source has no timestamp (e.g. pwf_stream_data_func_t's own `pts` when bridging a capture stream into a filter).
  * @return PWF_OK, PWF_ERR_INVALID_ARG for a bad filter, port or data, or PWF_ERR_NO_MEMORY when the push buffer cannot grow.
  */
-PWF_API int pwf_filter_push_port_data(pwf_filter_h filter, pwf_filter_port_h port, const void* data, size_t size,
-                                       int64_t pts);
+PWF_API int pwf_filter_push_port_data(struct pwf_filter* filter, struct pwf_filter_port* port, const void* data,
+                                      size_t size, int64_t pts);
 
 /**
  * @brief Starts processing. Fails if the filter has zero ports.
@@ -404,9 +409,9 @@ PWF_API int pwf_filter_push_port_data(pwf_filter_h filter, pwf_filter_port_h por
  * Safe to call again after stop(). It is refused from the process callback.
  *
  * @param filter The filter to start.
- * @return PWF_OK, or a pwf_error.
+ * @return PWF_OK, or an enum pwf_error.
  */
-PWF_API int pwf_filter_start(pwf_filter_h filter);
+PWF_API int pwf_filter_start(struct pwf_filter* filter);
 
 /**
  * @brief Stops processing; the filter may be restarted via pwf_filter_start().
@@ -420,9 +425,9 @@ PWF_API int pwf_filter_start(pwf_filter_h filter);
  *
  * @param filter The filter to stop.
  * @param drain  true to wait for what is already queued to finish first.
- * @return PWF_OK, or a pwf_error.
+ * @return PWF_OK, or an enum pwf_error.
  */
-PWF_API int pwf_filter_stop(pwf_filter_h filter, bool drain);
+PWF_API int pwf_filter_stop(struct pwf_filter* filter, bool drain);
 
 /**
  * @brief Releases all resources owned by `filter`, including its ports
@@ -435,7 +440,7 @@ PWF_API int pwf_filter_stop(pwf_filter_h filter, bool drain);
  *
  * @param filter The filter to destroy; NULL is a no-op.
  */
-PWF_API void pwf_filter_destroy(pwf_filter_h filter);
+PWF_API void pwf_filter_destroy(struct pwf_filter* filter);
 
 #ifdef __cplusplus
 }

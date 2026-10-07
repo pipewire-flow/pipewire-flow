@@ -21,7 +21,7 @@ size_t pwf_audio_bytes_per_frame(enum spa_audio_format format, int channels)
     return sample * (size_t)channels;
 }
 
-int pwf_stream_set_audio_config(pwf_stream_h handle, const pwf_audio_config* config)
+int pwf_stream_set_audio_config(struct pwf_stream* handle, const struct pwf_audio_config* config)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     if (!stream || stream->type != PWF_DATA_AUDIO || !config)

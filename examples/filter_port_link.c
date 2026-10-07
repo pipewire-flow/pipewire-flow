@@ -40,7 +40,8 @@ static const char* link_result_text(int res)
     }
 }
 
-static void on_process(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers, void* user_data)
+static void on_process(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
+                       void* user_data)
 {
     (void)filter;
     unsigned* cycles = user_data;
@@ -50,7 +51,7 @@ static void on_process(pwf_filter_h filter, pwf_filter_port_buffer* buffers, siz
         return;
 
     for (size_t i = 0; i < n_buffers; i++) {
-        pwf_dmabuf_plane plane;
+        struct pwf_dmabuf_plane plane;
         if (pwf_filter_port_get_dmabuf_planes(&buffers[i], &plane, 1) > 0)
             printf("  port %zu: dmabuf fd=%d stride=%u fresh=%d seq=%llu\n", i, plane.fd, plane.stride,
                    (int)buffers[i].fresh, (unsigned long long)buffers[i].seq);
@@ -59,7 +60,7 @@ static void on_process(pwf_filter_h filter, pwf_filter_port_buffer* buffers, siz
     }
 }
 
-static void on_error(pwf_filter_h filter, pwf_filter_port_h port, int error_code, void* user_data)
+static void on_error(struct pwf_filter* filter, struct pwf_filter_port* port, int error_code, void* user_data)
 {
     (void)filter;
     (void)port;
@@ -82,21 +83,21 @@ int main(int argc, char** argv)
     signal(SIGINT, on_sigint);
 
     unsigned cycles = 0;
-    pwf_filter_h filter = pwf_filter_create("pwf-port-link", on_process, &cycles);
+    struct pwf_filter* filter = pwf_filter_create("pwf-port-link", on_process, &cycles);
     if (!filter) {
         fprintf(stderr, "failed to create the filter (is PipeWire running?)\n");
         return 1;
     }
-    pwf_filter_set_error_cb(filter, on_error);
+    pwf_filter_set_error_callback(filter, on_error);
 
     /* Ask before fixing the port's format: a filter port has no converter, so
      * a size this camera lacks would only surface at link time, too late. */
-    pwf_video_config video_cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
-    pwf_video_format_info fmts[32];
+    struct pwf_video_config video_cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
+    struct pwf_video_format_info fmts[32];
     size_t n_fmts = 0;
     int fmt_res = pwf_filter_get_target_video_formats(filter, video_target, fmts, 32, &n_fmts);
     if (fmt_res == PWF_OK && n_fmts > 0) {
-        const pwf_video_format_info* pick = &fmts[0];
+        const struct pwf_video_format_info* pick = &fmts[0];
         video_cfg.width = pick->width;
         video_cfg.height = pick->height;
         video_cfg.pixel_format = pick->pixel_format;
@@ -108,10 +109,10 @@ int main(int argc, char** argv)
                video_cfg.pixel_format, video_cfg.width, video_cfg.height, video_cfg.fps);
     }
 
-    pwf_filter_port_opts dmabuf_opts = { .memory = PWF_PORT_MEMORY_DMABUF };
-    pwf_filter_port_h video_in =
+    struct pwf_filter_port_opts dmabuf_opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_filter_port* video_in =
         pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &video_cfg, &dmabuf_opts);
-    pwf_filter_port_h audio_in =
+    struct pwf_filter_port* audio_in =
         audio_target ? pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT) : NULL;
     if (!video_in || (audio_target && !audio_in)) {
         fprintf(stderr, "failed to add the filter's ports\n");

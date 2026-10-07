@@ -39,7 +39,7 @@
 static unsigned g_buffers;
 static int g_error;
 
-static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)buf;
@@ -47,7 +47,7 @@ static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* use
     g_buffers++;
 }
 
-static void on_fill(pwf_stream_h stream, pwf_stream_playback_buffer* buf, void* user_data)
+static void on_fill(struct pwf_stream* stream, struct pwf_stream_playback_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)user_data;
@@ -55,7 +55,7 @@ static void on_fill(pwf_stream_h stream, pwf_stream_playback_buffer* buf, void* 
     buf->size = 0; /* silence: this test is about wiring, not audio */
 }
 
-static void on_error(pwf_stream_h stream, int code, void* user_data)
+static void on_error(struct pwf_stream* stream, int code, void* user_data)
 {
     (void)stream;
     (void)user_data;
@@ -86,10 +86,10 @@ static int links_to(const char* node)
  * waiting on both rather than reading them once. */
 static void link_immediately_after_start(const char* device)
 {
-    pwf_stream_h s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
+    struct pwf_stream* s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
     PWF_ASSERT(s != NULL);
 
-    pwf_audio_config cfg = { .sample_rate = RATE, .channels = CHANNELS, .format = "S16" };
+    struct pwf_audio_config cfg = { .sample_rate = RATE, .channels = CHANNELS, .format = "S16" };
     PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_set_audio_config(s, &cfg), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_start(s), PWF_OK);
@@ -102,11 +102,11 @@ static void link_immediately_after_start(const char* device)
 }
 
 /* One direction's worth of the whole lifecycle. */
-static void exercise(pwf_stream_h s, const char* device)
+static void exercise(struct pwf_stream* s, const char* device)
 {
-    pwf_audio_config cfg = { .sample_rate = RATE, .channels = CHANNELS, .format = "S16" };
+    struct pwf_audio_config cfg = { .sample_rate = RATE, .channels = CHANNELS, .format = "S16" };
 
-    PWF_ASSERT_EQ(pwf_stream_set_error_cb(s, on_error), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_error_callback(s, on_error), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_set_audio_config(s, &cfg), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_start(s), PWF_OK);
@@ -172,11 +172,11 @@ static void exercise(pwf_stream_h s, const char* device)
  * cases above. */
 static void exercise_video(const char* camera)
 {
-    pwf_stream_h s = pwf_stream_create(PWF_DATA_VIDEO, on_data, NULL);
+    struct pwf_stream* s = pwf_stream_create(PWF_DATA_VIDEO, on_data, NULL);
     PWF_ASSERT(s != NULL);
 
-    pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
-    PWF_ASSERT_EQ(pwf_stream_set_error_cb(s, on_error), PWF_OK);
+    struct pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
+    PWF_ASSERT_EQ(pwf_stream_set_error_callback(s, on_error), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_set_video_config(s, &cfg), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_start(s), PWF_OK);
@@ -232,7 +232,7 @@ int main(void)
 
     if (have_source) {
         printf("capture -> %s\n", source);
-        pwf_stream_h s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
+        struct pwf_stream* s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
         if (!s) {
             printf("no PipeWire connection, skipping\n");
             return TEST_SKIP;
@@ -240,7 +240,7 @@ int main(void)
 
         /* The node pwf_test_find_node() found must be in the same stream's
          * own target list — they both read Audio/Source from the graph. */
-        pwf_target_info targets[64];
+        struct pwf_target_info targets[64];
         size_t n = 0;
         PWF_ASSERT_EQ(pwf_stream_get_target_list(s, targets, 64, &n), PWF_OK);
         bool listed = false;
@@ -255,7 +255,7 @@ int main(void)
 
     if (have_sink) {
         printf("playback -> %s\n", sink);
-        pwf_stream_h s = pwf_stream_create_playback(on_fill, NULL);
+        struct pwf_stream* s = pwf_stream_create_playback(on_fill, NULL);
         if (!s) {
             printf("no PipeWire connection, skipping\n");
             return TEST_SKIP;

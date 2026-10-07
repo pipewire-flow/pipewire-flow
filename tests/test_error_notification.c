@@ -11,14 +11,14 @@
 static int g_error_calls = 0;
 static int g_last_error_code = 0;
 
-static void noop_data_cb(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void noop_data_cb(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)buf;
     (void)user_data;
 }
 
-static void on_error(pwf_stream_h stream, int error_code, void* user_data)
+static void on_error(struct pwf_stream* stream, int error_code, void* user_data)
 {
     (void)stream;
     (void)user_data;
@@ -26,7 +26,7 @@ static void on_error(pwf_stream_h stream, int error_code, void* user_data)
     g_last_error_code = error_code;
 }
 
-static void check_source_loss(pwf_stream_h handle)
+static void check_source_loss(struct pwf_stream* handle)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
 
@@ -48,15 +48,15 @@ static void check_source_loss(pwf_stream_h handle)
 
 int main(void)
 {
-    pwf_stream_h audio = pwf_stream_create(PWF_DATA_AUDIO, noop_data_cb, NULL);
+    struct pwf_stream* audio = pwf_stream_create(PWF_DATA_AUDIO, noop_data_cb, NULL);
     PWF_ASSERT(audio != NULL);
-    PWF_ASSERT_EQ(pwf_stream_set_error_cb(audio, on_error), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_error_callback(audio, on_error), PWF_OK);
     check_source_loss(audio);
     pwf_stream_destroy(audio);
 
-    pwf_stream_h video = pwf_stream_create(PWF_DATA_VIDEO, noop_data_cb, NULL);
+    struct pwf_stream* video = pwf_stream_create(PWF_DATA_VIDEO, noop_data_cb, NULL);
     PWF_ASSERT(video != NULL);
-    PWF_ASSERT_EQ(pwf_stream_set_error_cb(video, on_error), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_error_callback(video, on_error), PWF_OK);
     check_source_loss(video);
     pwf_stream_destroy(video);
 

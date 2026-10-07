@@ -4,7 +4,7 @@
  * present. Captures each with plain (non-DMABUF) buffers and checks the
  * delivered data itself — the gap test_stream_dmabuf_hw.c (DMABUF-only) and
  * test_stream_lifecycle.c (discards buf) both leave uncovered. Audio and
- * video are two independent pwf_stream_h handles, since one handle is fixed
+ * video are two independent struct pwf_stream* handles, since one handle is fixed
  * to a single type at creation. */
 
 #include <stdbool.h>
@@ -28,7 +28,7 @@ struct counters {
     int error_code;
 };
 
-static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     struct counters* c = user_data;
@@ -41,7 +41,7 @@ static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* use
         c->saw_pts++;
 }
 
-static void on_error(pwf_stream_h stream, int error_code, void* user_data)
+static void on_error(struct pwf_stream* stream, int error_code, void* user_data)
 {
     (void)stream;
     struct counters* c = user_data;
@@ -54,12 +54,12 @@ static void on_error(pwf_stream_h stream, int error_code, void* user_data)
 static void run_video_capture(const char* camera)
 {
     struct counters c = { 0 };
-    pwf_stream_h s = pwf_stream_create(PWF_DATA_VIDEO, on_data, &c);
+    struct pwf_stream* s = pwf_stream_create(PWF_DATA_VIDEO, on_data, &c);
     PWF_ASSERT(s != NULL);
-    PWF_ASSERT_EQ(pwf_stream_set_error_cb(s, on_error), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_error_callback(s, on_error), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_OK);
 
-    pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
+    struct pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
     PWF_ASSERT_EQ(pwf_stream_set_video_config(s, &cfg), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_start(s), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_link(s, camera), PWF_OK);
@@ -87,12 +87,12 @@ static void run_video_capture(const char* camera)
 static void run_audio_capture(const char* mic)
 {
     struct counters c = { 0 };
-    pwf_stream_h s = pwf_stream_create(PWF_DATA_AUDIO, on_data, &c);
+    struct pwf_stream* s = pwf_stream_create(PWF_DATA_AUDIO, on_data, &c);
     PWF_ASSERT(s != NULL);
-    PWF_ASSERT_EQ(pwf_stream_set_error_cb(s, on_error), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_error_callback(s, on_error), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_OK);
 
-    pwf_audio_config cfg = { .sample_rate = 48000, .channels = 1 };
+    struct pwf_audio_config cfg = { .sample_rate = 48000, .channels = 1 };
     PWF_ASSERT_EQ(pwf_stream_set_audio_config(s, &cfg), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_start(s), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_link(s, mic), PWF_OK);
@@ -120,7 +120,7 @@ struct mjpg_counters {
     int error_code;
 };
 
-static void on_mjpg_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void on_mjpg_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     struct mjpg_counters* c = user_data;
@@ -135,7 +135,7 @@ static void on_mjpg_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void
         c->saw_different_size = true;
 }
 
-static void on_mjpg_error(pwf_stream_h stream, int error_code, void* user_data)
+static void on_mjpg_error(struct pwf_stream* stream, int error_code, void* user_data)
 {
     (void)stream;
     struct mjpg_counters* c = user_data;
@@ -147,12 +147,12 @@ static void on_mjpg_error(pwf_stream_h stream, int error_code, void* user_data)
 static void run_mjpg_capture_if_supported(const char* camera)
 {
     struct mjpg_counters c = { 0 };
-    pwf_stream_h s = pwf_stream_create(PWF_DATA_VIDEO, on_mjpg_data, &c);
+    struct pwf_stream* s = pwf_stream_create(PWF_DATA_VIDEO, on_mjpg_data, &c);
     PWF_ASSERT(s != NULL);
-    PWF_ASSERT_EQ(pwf_stream_set_error_cb(s, on_mjpg_error), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_error_callback(s, on_mjpg_error), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_OK);
 
-    pwf_video_config cfg = { .width = 1280, .height = 720, .pixel_format = "MJPG", .fps = 30 };
+    struct pwf_video_config cfg = { .width = 1280, .height = 720, .pixel_format = "MJPG", .fps = 30 };
     PWF_ASSERT_EQ(pwf_stream_set_video_config(s, &cfg), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_start(s), PWF_OK);
 

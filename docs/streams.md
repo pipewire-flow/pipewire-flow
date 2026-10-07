@@ -2,7 +2,7 @@
 
 `include/pwf/pwf_stream.h` — capturing audio or video from a device, and
 playing audio back to one. A stream is a single handle with a single
-callback; one `pwf_stream_h` captures either audio or video, and both types
+callback; one `struct pwf_stream*` captures either audio or video, and both types
 share the same creation, control, and data-callback functions.
 
 - [Capture](#capture)
@@ -13,25 +13,25 @@ share the same creation, control, and data-callback functions.
 ## Capture
 
 ```c
-pwf_stream_h pwf_stream_create(pwf_data_type type, pwf_stream_data_cb callback, void* user_data);
-int pwf_stream_set_error_cb(pwf_stream_h stream, pwf_stream_error_cb callback);
-int pwf_stream_set_target(pwf_stream_h stream, const char* target);
-int pwf_stream_set_role(pwf_stream_h stream, const char* role);
-int pwf_stream_set_audio_config(pwf_stream_h stream, const pwf_audio_config* config);
-int pwf_stream_set_video_config(pwf_stream_h stream, const pwf_video_config* config);
-int pwf_stream_start(pwf_stream_h stream);
-int pwf_stream_stop(pwf_stream_h stream, bool drain);
-void pwf_stream_destroy(pwf_stream_h stream);
+struct pwf_stream* pwf_stream_create(enum pwf_data_type type, pwf_stream_data_func_t callback, void* user_data);
+int pwf_stream_set_error_callback(struct pwf_stream* stream, pwf_stream_error_func_t callback);
+int pwf_stream_set_target(struct pwf_stream* stream, const char* target);
+int pwf_stream_set_role(struct pwf_stream* stream, const char* role);
+int pwf_stream_set_audio_config(struct pwf_stream* stream, const struct pwf_audio_config* config);
+int pwf_stream_set_video_config(struct pwf_stream* stream, const struct pwf_video_config* config);
+int pwf_stream_start(struct pwf_stream* stream);
+int pwf_stream_stop(struct pwf_stream* stream, bool drain);
+void pwf_stream_destroy(struct pwf_stream* stream);
 ```
 
 Format is passed as a config struct, so new fields can be added without
 changing the call signature:
 
 ```c
-pwf_audio_config a = { .sample_rate = 48000, .channels = 2, .format = "F32" };
+struct pwf_audio_config a = { .sample_rate = 48000, .channels = 2, .format = "F32" };
 pwf_stream_set_audio_config(stream, &a);   /* format = NULL defaults to "S16" */
 
-pwf_video_config v = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
+struct pwf_video_config v = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
 pwf_stream_set_video_config(stream, &v);   /* fps = 0 lets the source pick the rate */
 ```
 
@@ -56,7 +56,7 @@ which is what actually connects the stream.
 for you, so an application does not have to shell out to `wpctl`/`pw-cli`:
 
 ```c
-pwf_target_info targets[16];
+struct pwf_target_info targets[16];
 size_t n = 0;
 if (pwf_stream_get_target_list(stream, targets, 16, &n) != PWF_OK)
     return; /* the graph could not be reached — distinct from finding nothing */
@@ -85,7 +85,7 @@ returning their count directly.
 role policy can route or duck it accordingly:
 
 ```c
-pwf_stream_h s = pwf_stream_create_playback(on_fill, NULL);
+struct pwf_stream* s = pwf_stream_create_playback(on_fill, NULL);
 pwf_stream_set_role(s, "Notification");   /* before the format, like a target */
 pwf_stream_set_audio_config(s, &cfg);
 ```
@@ -114,7 +114,7 @@ tops out at 1280x720 fails to negotiate.
 what a given target has, in a shape meant to be handed straight back:
 
 ```c
-pwf_video_format_info fmts[32];
+struct pwf_video_format_info fmts[32];
 size_t n = 0;
 if (pwf_stream_get_target_video_formats(stream, "my-camera", fmts, 32, &n) != PWF_OK)
     return; /* no such node, or the query timed out */
@@ -122,7 +122,7 @@ for (size_t i = 0; i < n && i < 32; i++)
     printf("%s %dx%d @%d\n", fmts[i].pixel_format, fmts[i].width, fmts[i].height,
            fmts[i].n_fps ? fmts[i].fps[0] : 0);
 
-pwf_video_config cfg = {
+struct pwf_video_config cfg = {
     .width        = fmts[0].width,
     .height       = fmts[0].height,
     .pixel_format = fmts[0].pixel_format,   /* already a name pwf takes */
@@ -155,19 +155,19 @@ sample formats, so a device's own list would not describe what
 
 ### The capture buffer
 
-`pwf_stream_data_cb` receives a `const pwf_stream_buffer*` rather than
+`pwf_stream_data_func_t` receives a `const struct pwf_stream_buffer*` rather than
 loose `data`/`size` parameters, so future fields can be added without
 changing the callback signature. It currently carries:
 
 ```c
-typedef struct {
+struct pwf_stream_buffer {
     void* data;
     size_t size;
     int64_t pts; /* capture timestamp in nanoseconds (the driver clock
                     used by the underlying SPA node, e.g. ALSA or
                     V4L2), or -1 if the buffer had no timestamp
                     metadata. */
-} pwf_stream_buffer;
+};
 ```
 
 The stream requests capture-clock metadata from the source on connect, so
@@ -185,14 +185,14 @@ connects, and start/stop/destroy behave identically.
 `pwf_stream_set_video_config()` is rejected on it.
 
 ```c
-pwf_stream_h pwf_stream_create_playback(pwf_stream_playback_cb callback, void* user_data);
+struct pwf_stream* pwf_stream_create_playback(pwf_stream_playback_func_t callback, void* user_data);
 ```
 
 The difference is the callback. Capture hands you a `const` buffer to read;
 playback hands you a writable one to fill and asks how much you wrote:
 
 ```c
-typedef struct {
+struct pwf_stream_playback_buffer {
     void* data;       /* writable region for this cycle */
     size_t available; /* bytes you may write this cycle: what the device asked
                          for, or the region's full size if the graph said
@@ -203,7 +203,7 @@ typedef struct {
                          taken, playback when they will be played — which is
                          what you sync other media against. */
     size_t size;      /* you set this: bytes actually written */
-} pwf_stream_playback_buffer;
+};
 ```
 
 A full cycle always goes out. Write less than `available` and the remainder is
@@ -229,13 +229,13 @@ makes the decision and the stream connects to nothing at all.
 Three calls let an application do the wiring instead:
 
 ```c
-int pwf_stream_set_autoconnect(pwf_stream_h stream, bool enable);
-int pwf_stream_link(pwf_stream_h stream, const char* target);
-int pwf_stream_unlink(pwf_stream_h stream);
+int pwf_stream_set_autoconnect(struct pwf_stream* stream, bool enable);
+int pwf_stream_link(struct pwf_stream* stream, const char* target);
+int pwf_stream_unlink(struct pwf_stream* stream);
 ```
 
 ```c
-pwf_stream_h s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
+struct pwf_stream* s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
 pwf_stream_set_autoconnect(s, false);        /* before the format */
 pwf_stream_set_audio_config(s, &cfg);
 pwf_stream_start(s);                          /* the graph is where we look */
@@ -312,11 +312,11 @@ a GPU import path) never has to build a `pwf_filter` just to forward one
 input:
 
 ```c
-typedef struct { pwf_port_memory memory; } pwf_stream_dmabuf_opts;
+struct pwf_stream_dmabuf_opts { enum pwf_port_memory memory; };
 
-int pwf_stream_set_video_config_ex(pwf_stream_h stream, const pwf_video_config* config,
-                                    const pwf_stream_dmabuf_opts* opts);
-size_t pwf_stream_get_dmabuf_planes(pwf_stream_h stream, pwf_dmabuf_plane* planes, size_t planes_len);
+int pwf_stream_set_video_config_ex(struct pwf_stream* stream, const struct pwf_video_config* config,
+                                    const struct pwf_stream_dmabuf_opts* opts);
+size_t pwf_stream_get_dmabuf_planes(struct pwf_stream* stream, struct pwf_dmabuf_plane* planes, size_t planes_len);
 ```
 
 `pwf_stream_set_video_config_ex()` with `opts->memory == PWF_PORT_MEMORY_DMABUF`
@@ -328,14 +328,14 @@ delivered `pwf_stream_buffer.data` is NULL — read the frame's planes with
 formats like NV12/I420). It returns 0 for a non-DMABUF stream, never
 fabricating an fd, and the `fd` is borrowed for the callback only. If the
 source cannot provide DMABUF, the stream delivers no frames and
-`pwf_stream_error_cb` fires with `PWF_ERR_SOURCE_UNAVAILABLE` —
+`pwf_stream_error_func_t` fires with `PWF_ERR_SOURCE_UNAVAILABLE` —
 there is no silent fallback to CPU-mapped delivery. This capability is
 video-capture-only; requesting it on an audio or playback stream is
 rejected the same way an ordinary video config is.
 
 ## Error codes
 
-Every call that can fail returns a `pwf_error`, and the filter calls
+Every call that can fail returns a `enum pwf_error`, and the filter calls
 return the same codes.
 
 | Code | What happened | What usually helps |

@@ -10,7 +10,7 @@
 #include "pwf_stream_internal.h"
 #include "pwf_test.h"
 
-static const pwf_audio_config g_cfg = { .sample_rate = 48000, .channels = 2 };
+static const struct pwf_audio_config g_cfg = { .sample_rate = 48000, .channels = 2 };
 
 static double now_ms(void)
 {
@@ -19,16 +19,16 @@ static double now_ms(void)
     return ts.tv_sec * 1e3 + ts.tv_nsec / 1e6;
 }
 
-static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)buf;
     (void)user_data;
 }
 
-static pwf_stream_h make_running_stream(void)
+static struct pwf_stream* make_running_stream(void)
 {
-    pwf_stream_h s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
+    struct pwf_stream* s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
     PWF_ASSERT(s != NULL);
     PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_set_audio_config(s, &g_cfg), PWF_OK);
@@ -39,7 +39,7 @@ static pwf_stream_h make_running_stream(void)
 /* Inside the data callback every call taking the loop lock is refused at once. */
 static void test_calls_refused_in_data_callback(void)
 {
-    pwf_stream_h s = make_running_stream();
+    struct pwf_stream* s = make_running_stream();
     size_t found = 99;
 
     pwf_stream_processing = (struct pwf_stream*)s;
@@ -79,7 +79,7 @@ static int call_on_loop(struct spa_loop* loop, bool async, uint32_t seq, const v
     (void)data;
     (void)size;
     struct loop_calls* c = user_data;
-    pwf_stream_h s = (pwf_stream_h)c->stream;
+    struct pwf_stream* s = c->stream;
     size_t found = 0;
 
     c->in_loop_thread = pw_thread_loop_in_thread(c->stream->conn.loop);
@@ -98,7 +98,7 @@ static int call_on_loop(struct spa_loop* loop, bool async, uint32_t seq, const v
 /* On the loop thread, where the error callback runs, calls that would wait on it are refused. */
 static void test_calls_refused_on_loop_thread(void)
 {
-    pwf_stream_h s = make_running_stream();
+    struct pwf_stream* s = make_running_stream();
     struct loop_calls c = { .stream = (struct pwf_stream*)s, .in_loop_thread = -1 };
 
     /* A blocking invoke from outside breaks the thread loop's lock count, so this one queues and polls. */

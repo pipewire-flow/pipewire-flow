@@ -28,7 +28,7 @@ void pwf_stream_dmabuf_log_unavailable(struct pwf_stream* stream)
                     "the stream will deliver no frames");
 }
 
-size_t pwf_stream_get_dmabuf_planes(pwf_stream_h handle, pwf_dmabuf_plane* planes, size_t planes_len)
+size_t pwf_stream_get_dmabuf_planes(struct pwf_stream* handle, struct pwf_dmabuf_plane* planes, size_t planes_len)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     if (!stream || !stream->current_dmabuf_buf)

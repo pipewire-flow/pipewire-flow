@@ -52,7 +52,7 @@ static volatile sig_atomic_t running = 1;
 
 static void on_signal(int sig) { (void)sig; running = 0; }
 
-static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream; (void)user_data;
     printf("%zu bytes (pts=%lld ns)\n", buf->size, (long long)buf->pts);
@@ -62,11 +62,11 @@ int main(void)
 {
     signal(SIGINT, on_signal);
 
-    pwf_stream_h s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
+    struct pwf_stream* s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
     if (!s)
         return 1;
 
-    pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
+    struct pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
     if (pwf_stream_set_audio_config(s, &cfg) != PWF_OK ||
         pwf_stream_start(s) != PWF_OK) {
         pwf_stream_destroy(s);
@@ -107,7 +107,7 @@ Four headers are installed, one per area plus the types the first two share:
 Some highlights of what lives behind them:
 
 - **Config structs, not long signatures.** Formats are passed as
-  `pwf_audio_config`/`pwf_video_config`, so new fields never change a call.
+  `struct pwf_audio_config`/`struct pwf_video_config`, so new fields never change a call.
 - **Timestamps.** Every capture buffer carries a `pts` from the driver
   clock; a playback buffer's `pts` says when its first sample will be heard.
 - **Zero-copy.** Video capture streams and filter video input ports can both
@@ -115,7 +115,7 @@ Some highlights of what lives behind them:
 - **Your own graph.** Streams and filter ports can skip the session manager
   and link themselves to a named device.
 - **Ask before you configure.** A camera reports the sizes and frame rates it
-  actually has, in a form that goes straight into a `pwf_video_config`. Audio
+  actually has, in a form that goes straight into a `struct pwf_video_config`. Audio
   has no such call on purpose — PipeWire converts sample formats, rates and
   channel counts for a stream, so whatever you ask for works.
 

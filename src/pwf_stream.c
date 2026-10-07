@@ -37,7 +37,7 @@ void pwf_stream_on_state_changed(void* data, enum pw_stream_state old, enum pw_s
         pwf_log_warning("stream: %s became unavailable",
                         stream->direction == PWF_STREAM_DIRECTION_PLAYBACK ? "output device" : "source");
         if (stream->error_cb)
-            stream->error_cb((pwf_stream_h)stream, PWF_ERR_SOURCE_UNAVAILABLE, stream->user_data);
+            stream->error_cb(stream, PWF_ERR_SOURCE_UNAVAILABLE, stream->user_data);
     }
 
     /* A stream's node id is only assigned once the server has seen it, so
@@ -64,7 +64,7 @@ static void pwf_stream_on_param_changed(void* data, uint32_t id, const struct sp
     if (stream->state == PWF_STREAM_STATE_RUNNING) {
         stream->state = PWF_STREAM_STATE_STOPPED;
         if (stream->error_cb)
-            stream->error_cb((pwf_stream_h)stream, PWF_ERR_SOURCE_UNAVAILABLE, stream->user_data);
+            stream->error_cb(stream, PWF_ERR_SOURCE_UNAVAILABLE, stream->user_data);
     }
 }
 
@@ -118,7 +118,7 @@ static void pwf_stream_teardown(struct pwf_stream* stream)
 
 /* Allocates a stream of `type`/`direction` and brings up its own loop.
  * Callers attach the direction-appropriate callback to the result. */
-static struct pwf_stream* pwf_stream_alloc(pwf_data_type type, enum pwf_stream_direction direction,
+static struct pwf_stream* pwf_stream_alloc(enum pwf_data_type type, enum pwf_stream_direction direction,
                                             void* user_data)
 {
     pwf_pw_global_init();
@@ -145,7 +145,7 @@ static struct pwf_stream* pwf_stream_alloc(pwf_data_type type, enum pwf_stream_d
     return stream;
 }
 
-pwf_stream_h pwf_stream_create(pwf_data_type type, pwf_stream_data_cb callback, void* user_data)
+struct pwf_stream* pwf_stream_create(enum pwf_data_type type, pwf_stream_data_func_t callback, void* user_data)
 {
     if (!callback || (type != PWF_DATA_AUDIO && type != PWF_DATA_VIDEO))
         return NULL;
@@ -155,10 +155,10 @@ pwf_stream_h pwf_stream_create(pwf_data_type type, pwf_stream_data_cb callback, 
         return NULL;
 
     stream->data_cb = callback;
-    return (pwf_stream_h)stream;
+    return stream;
 }
 
-pwf_stream_h pwf_stream_create_playback(pwf_stream_playback_cb callback, void* user_data)
+struct pwf_stream* pwf_stream_create_playback(pwf_stream_playback_func_t callback, void* user_data)
 {
     if (!callback)
         return NULL;
@@ -169,7 +169,7 @@ pwf_stream_h pwf_stream_create_playback(pwf_stream_playback_cb callback, void* u
         return NULL;
 
     stream->playback_cb = callback;
-    return (pwf_stream_h)stream;
+    return stream;
 }
 
 int pwf_stream_internal_connect(struct pwf_stream* stream, const struct spa_pod** params, uint32_t n_params,
@@ -253,7 +253,7 @@ static int pwf_stream_replace_string(char** slot, const char* value)
     return PWF_OK;
 }
 
-int pwf_stream_set_error_cb(pwf_stream_h handle, pwf_stream_error_cb callback)
+int pwf_stream_set_error_callback(struct pwf_stream* handle, pwf_stream_error_func_t callback)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     if (!stream)
@@ -263,7 +263,7 @@ int pwf_stream_set_error_cb(pwf_stream_h handle, pwf_stream_error_cb callback)
     return PWF_OK;
 }
 
-int pwf_stream_set_autoconnect(pwf_stream_h handle, bool enable)
+int pwf_stream_set_autoconnect(struct pwf_stream* handle, bool enable)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     if (!stream)
@@ -280,7 +280,7 @@ int pwf_stream_set_autoconnect(pwf_stream_h handle, bool enable)
     return PWF_OK;
 }
 
-int pwf_stream_set_target(pwf_stream_h handle, const char* target)
+int pwf_stream_set_target(struct pwf_stream* handle, const char* target)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     if (!stream)
@@ -291,7 +291,7 @@ int pwf_stream_set_target(pwf_stream_h handle, const char* target)
     return pwf_stream_replace_string(&stream->target, target);
 }
 
-int pwf_stream_set_role(pwf_stream_h handle, const char* role)
+int pwf_stream_set_role(struct pwf_stream* handle, const char* role)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     if (!stream)
@@ -300,7 +300,7 @@ int pwf_stream_set_role(pwf_stream_h handle, const char* role)
     return pwf_stream_replace_string(&stream->role, role);
 }
 
-int pwf_stream_start(pwf_stream_h handle)
+int pwf_stream_start(struct pwf_stream* handle)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     if (!stream)
@@ -318,7 +318,7 @@ int pwf_stream_start(pwf_stream_h handle)
     return PWF_OK;
 }
 
-int pwf_stream_stop(pwf_stream_h handle, bool drain)
+int pwf_stream_stop(struct pwf_stream* handle, bool drain)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     if (!stream)
@@ -351,7 +351,7 @@ int pwf_stream_stop(pwf_stream_h handle, bool drain)
     return PWF_OK;
 }
 
-void pwf_stream_destroy(pwf_stream_h handle)
+void pwf_stream_destroy(struct pwf_stream* handle)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     if (!stream || pwf_stream_refuse_in_callback(stream, true, __func__))

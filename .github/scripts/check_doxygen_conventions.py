@@ -13,7 +13,7 @@
    non-void function/callback also has @return; the @param name list
    matches the declaration's parameter list exactly (same names, same
    order, none missing or extra).
-3. Every @see target names a symbol (function, typedef, or enumerator)
+3. Every @see target names a symbol (function, type, or enumerator)
    actually declared somewhere in the checked headers.
 
 Usage: check_doxygen_conventions.py <header.h> [<header.h> ...]
@@ -84,8 +84,11 @@ def tokenize(text):
 
 def analyze_decl(decl_text):
     """Returns (name, is_void, params) for a function/callback decl, or
-    (name, None, None) for a struct/enum/opaque-handle typedef."""
+    (name, None, None) for a struct or enum declaration."""
     code = re.sub(r'\bPWF_API\b', '', strip_comments(decl_text))
+    tagged = re.match(r'\s*(?:struct|enum)\s+(\w+)\s*[{;]', code)
+    if tagged:
+        return tagged.group(1), None, None
     if '(' not in code:
         m = re.search(r'(\w+)\s*;\s*$', code)
         return (m.group(1) if m else None), None, None
@@ -158,7 +161,7 @@ def check_header(path, errors, known_symbols, see_refs):
             errors.append(f"{path}: {name}: missing @brief")
 
         if params is None:
-            continue  # struct/enum/opaque handle: no @param/@return to check
+            continue  # struct or enum: no @param/@return to check
 
         if not doc:
             errors.append(f"{path}: {name}: no doc block found for a function/callback")

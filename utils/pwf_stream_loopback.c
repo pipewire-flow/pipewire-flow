@@ -24,15 +24,15 @@ static void on_signal(int sig)
  * real-time thread) writes, the playback stream (a different real-time
  * thread) reads. write_pos/read_pos only ever grow, wrapping into `data`
  * via modulo, so neither side needs to touch the other's index. */
-typedef struct {
+struct loopback_ring {
     uint8_t* data;
     size_t capacity;
     atomic_size_t write_pos;
     atomic_size_t read_pos;
     atomic_size_t dropped;
-} loopback_ring;
+};
 
-static bool ring_init(loopback_ring* ring, size_t capacity)
+static bool ring_init(struct loopback_ring* ring, size_t capacity)
 {
     ring->data = calloc(1, capacity);
     if (!ring->data)
@@ -44,14 +44,14 @@ static bool ring_init(loopback_ring* ring, size_t capacity)
     return true;
 }
 
-static void ring_destroy(loopback_ring* ring)
+static void ring_destroy(struct loopback_ring* ring)
 {
     free(ring->data);
 }
 
 /* Capture thread only. Drops the newest bytes on overrun rather than
  * advancing read_pos itself, which only the playback thread may do. */
-static void ring_write(loopback_ring* ring, const uint8_t* src, size_t len)
+static void ring_write(struct loopback_ring* ring, const uint8_t* src, size_t len)
 {
     size_t read_pos = atomic_load_explicit(&ring->read_pos, memory_order_acquire);
     size_t write_pos = atomic_load_explicit(&ring->write_pos, memory_order_relaxed);
@@ -67,7 +67,7 @@ static void ring_write(loopback_ring* ring, const uint8_t* src, size_t len)
 
 /* Playback thread only. Returns fewer bytes than `len` when the ring is
  * running low; the caller leaves the remainder as silence. */
-static size_t ring_read(loopback_ring* ring, uint8_t* dst, size_t len)
+static size_t ring_read(struct loopback_ring* ring, uint8_t* dst, size_t len)
 {
     size_t write_pos = atomic_load_explicit(&ring->write_pos, memory_order_acquire);
     size_t read_pos = atomic_load_explicit(&ring->read_pos, memory_order_relaxed);
@@ -80,7 +80,7 @@ static size_t ring_read(loopback_ring* ring, uint8_t* dst, size_t len)
     return len;
 }
 
-static void on_audio_capture(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void on_audio_capture(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     if (buf->data && buf->size > 0)
@@ -89,13 +89,13 @@ static void on_audio_capture(pwf_stream_h stream, const pwf_stream_buffer* buf, 
 
 /* Real-time thread: must not block, allocate, or perform I/O, so this is
  * the ring read and nothing else. */
-static void on_audio_playback(pwf_stream_h stream, pwf_stream_playback_buffer* buf, void* user_data)
+static void on_audio_playback(struct pwf_stream* stream, struct pwf_stream_playback_buffer* buf, void* user_data)
 {
     (void)stream;
     buf->size = ring_read(user_data, buf->data, buf->available);
 }
 
-static void on_audio_capture_error(pwf_stream_h stream, int error_code, void* user_data)
+static void on_audio_capture_error(struct pwf_stream* stream, int error_code, void* user_data)
 {
     (void)stream;
     (void)user_data;
@@ -103,7 +103,7 @@ static void on_audio_capture_error(pwf_stream_h stream, int error_code, void* us
     g_running = 0;
 }
 
-static void on_audio_playback_error(pwf_stream_h stream, int error_code, void* user_data)
+static void on_audio_playback_error(struct pwf_stream* stream, int error_code, void* user_data)
 {
     (void)stream;
     (void)user_data;
@@ -111,15 +111,15 @@ static void on_audio_playback_error(pwf_stream_h stream, int error_code, void* u
     g_running = 0;
 }
 
-typedef struct {
+struct video_ctx {
     int index;
     bool dmabuf;
     uint64_t frames;
-} video_ctx;
+};
 
-static void on_video_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void on_video_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
-    video_ctx* ctx = user_data;
+    struct video_ctx* ctx = user_data;
     ctx->frames++;
 
     if (!ctx->dmabuf) {
@@ -128,7 +128,7 @@ static void on_video_data(pwf_stream_h stream, const pwf_stream_buffer* buf, voi
         return;
     }
 
-    pwf_dmabuf_plane planes[4];
+    struct pwf_dmabuf_plane planes[4];
     size_t n_planes = pwf_stream_get_dmabuf_planes(stream, planes, 4);
     if (n_planes == 0) {
         fprintf(stderr, "video[%d]: frame %llu, no DMABUF plane yet (pts=%lld ns)\n", ctx->index,
@@ -140,10 +140,10 @@ static void on_video_data(pwf_stream_h stream, const pwf_stream_buffer* buf, voi
             (long long)buf->pts);
 }
 
-static void on_video_error(pwf_stream_h stream, int error_code, void* user_data)
+static void on_video_error(struct pwf_stream* stream, int error_code, void* user_data)
 {
     (void)stream;
-    video_ctx* ctx = user_data;
+    struct video_ctx* ctx = user_data;
     fprintf(stderr, "video[%d]: source lost (error %d)\n", ctx->index, error_code);
     g_running = 0;
 }
@@ -311,11 +311,11 @@ int main(int argc, char** argv)
     }
 
     int status = 0;
-    loopback_ring ring = { 0 };
-    pwf_stream_h audio_capture = NULL;
-    pwf_stream_h audio_playback = NULL;
-    pwf_stream_h* video_streams = NULL;
-    video_ctx* video_ctxs = NULL;
+    struct loopback_ring ring = { 0 };
+    struct pwf_stream* audio_capture = NULL;
+    struct pwf_stream* audio_playback = NULL;
+    struct pwf_stream** video_streams = NULL;
+    struct video_ctx* video_ctxs = NULL;
     int video_started = 0;
 
     if (audio_enabled) {
@@ -332,14 +332,15 @@ int main(int argc, char** argv)
             status = 1;
             goto cleanup;
         }
-        pwf_stream_set_error_cb(audio_capture, on_audio_capture_error);
+        pwf_stream_set_error_callback(audio_capture, on_audio_capture_error);
         if (device && pwf_stream_set_target(audio_capture, device) != PWF_OK) {
             fprintf(stderr, "pwf_stream_loopback: failed to select capture device '%s'\n", device);
             status = 1;
             goto cleanup;
         }
 
-        pwf_audio_config audio_cfg = { .sample_rate = sample_rate, .channels = channels, .format = audio_format };
+        struct pwf_audio_config audio_cfg = { .sample_rate = sample_rate, .channels = channels,
+                                              .format = audio_format };
         if (pwf_stream_set_audio_config(audio_capture, &audio_cfg) != PWF_OK) {
             fprintf(stderr, "pwf_stream_loopback: failed to set the audio capture format\n");
             status = 1;
@@ -352,7 +353,7 @@ int main(int argc, char** argv)
             status = 1;
             goto cleanup;
         }
-        pwf_stream_set_error_cb(audio_playback, on_audio_playback_error);
+        pwf_stream_set_error_callback(audio_playback, on_audio_playback_error);
         if (pwf_stream_set_audio_config(audio_playback, &audio_cfg) != PWF_OK) {
             fprintf(stderr, "pwf_stream_loopback: failed to set the audio playback format\n");
             status = 1;
@@ -375,8 +376,9 @@ int main(int argc, char** argv)
             goto cleanup;
         }
 
-        pwf_video_config video_cfg = { .width = width, .height = height, .pixel_format = pixel_format, .fps = fps };
-        pwf_stream_dmabuf_opts dmabuf_opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+        struct pwf_video_config video_cfg = { .width = width, .height = height, .pixel_format = pixel_format,
+                                              .fps = fps };
+        struct pwf_stream_dmabuf_opts dmabuf_opts = { .memory = PWF_PORT_MEMORY_DMABUF };
 
         for (int i = 0; i < video_streams_n; i++) {
             video_ctxs[i].index = i;
@@ -389,7 +391,7 @@ int main(int argc, char** argv)
                 status = 1;
                 goto cleanup;
             }
-            pwf_stream_set_error_cb(video_streams[i], on_video_error);
+            pwf_stream_set_error_callback(video_streams[i], on_video_error);
 
             int cfg_res = use_dmabuf ? pwf_stream_set_video_config_ex(video_streams[i], &video_cfg, &dmabuf_opts)
                                       : pwf_stream_set_video_config(video_streams[i], &video_cfg);

@@ -42,7 +42,7 @@ struct pwf_filter_video_port_state {
  * than an owned copy, since that table outlives every filter. */
 struct pwf_filter_pending_event {
     uint32_t offset;
-    pwf_event_kind kind;
+    enum pwf_event_kind kind;
     const char* key;  /* static vocabulary entry, NULL unless kind == PWF_EVENT_PROPERTY */
     void* data;       /* owned copy */
     size_t size;
@@ -50,13 +50,13 @@ struct pwf_filter_pending_event {
 
 /* One input or output port on a filter. This struct IS the PipeWire
  * port's user-data block (pw_filter_add_port() allocates it inline), so
- * a pwf_filter_port_h is just this pointer. Only resolved values are
- * kept (not the caller's pwf_video_config, whose pixel_format pointer
+ * a struct pwf_filter_port* is just this pointer. Only resolved values are
+ * kept (not the caller's struct pwf_video_config, whose pixel_format pointer
  * isn't guaranteed to outlive the call that added the port). */
 struct pwf_filter_port {
     struct pwf_filter* filter;
-    pwf_filter_port_direction direction;
-    pwf_data_type media_type;
+    enum pwf_filter_port_direction direction;
+    enum pwf_data_type media_type;
     union {
         struct pwf_filter_audio_port_state audio;
         struct pwf_filter_video_port_state video;
@@ -97,7 +97,7 @@ struct pwf_filter_port {
      * cycle's dequeued buffer's maximum byte size, set before the
      * callback runs so pwf_filter_port_push_event() can reject a push
      * that wouldn't fit instead of silently truncating later. */
-    pwf_event* incoming_events;
+    struct pwf_event* incoming_events;
     size_t n_incoming_events;
     size_t incoming_events_capacity;
 
@@ -160,8 +160,8 @@ struct pwf_filter {
     size_t n_ports;
     size_t ports_capacity;
 
-    pwf_filter_process_cb process_cb;
-    pwf_filter_error_cb error_cb;
+    pwf_filter_process_func_t process_cb;
+    pwf_filter_error_func_t error_cb;
     void* user_data;
 
     struct pwf_pw_core_conn conn;
@@ -190,7 +190,7 @@ struct pwf_filter {
 bool pwf_filter_add_port_to_list(struct pwf_filter* filter, struct pwf_filter_port* port);
 
 /* .process callback registered on the underlying pw_filter; assembles
- * one pwf_filter_port_buffer per port (consuming any staged pushed
+ * one struct pwf_filter_port_buffer per port (consuming any staged pushed
  * buffer first) and invokes the developer's process_cb once. */
 void pwf_filter_on_process(void* data, struct spa_io_position* position);
 

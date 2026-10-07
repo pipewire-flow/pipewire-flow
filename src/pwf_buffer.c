@@ -16,8 +16,8 @@ static void pwf_stream_deliver_dmabuf(struct pwf_stream* stream, struct spa_buff
     stream->dmabuf_retrieved = false;
 
     if (stream->data_cb) {
-        pwf_stream_buffer sbuf = { .data = NULL, .size = 0, .pts = pts };
-        stream->data_cb((pwf_stream_h)stream, &sbuf, stream->user_data);
+        struct pwf_stream_buffer sbuf = { .data = NULL, .size = 0, .pts = pts };
+        stream->data_cb(stream, &sbuf, stream->user_data);
     }
 
     if (!stream->dmabuf_retrieved &&
@@ -57,8 +57,8 @@ void pwf_stream_on_process(void* data)
     } else {
         struct spa_data* d = &buf->datas[0];
         if (d->data && d->chunk && d->chunk->size > 0 && stream->data_cb) {
-            pwf_stream_buffer sbuf = { .data = d->data, .size = d->chunk->size, .pts = pts };
-            stream->data_cb((pwf_stream_h)stream, &sbuf, stream->user_data);
+            struct pwf_stream_buffer sbuf = { .data = d->data, .size = d->chunk->size, .pts = pts };
+            stream->data_cb(stream, &sbuf, stream->user_data);
         }
     }
     pwf_stream_processing = NULL;

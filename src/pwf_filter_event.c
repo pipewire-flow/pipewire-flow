@@ -45,7 +45,7 @@ static const struct pwf_property_entry* pwf_property_find_by_id(uint32_t id)
     return NULL;
 }
 
-static bool pwf_event_kind_key_valid(pwf_event_kind kind, const char* key)
+static bool pwf_event_kind_key_valid(enum pwf_event_kind kind, const char* key)
 {
     if (kind == PWF_EVENT_PROPERTY)
         return pwf_property_find_by_name(key) != NULL;
@@ -54,11 +54,11 @@ static bool pwf_event_kind_key_valid(pwf_event_kind kind, const char* key)
     return false; /* PWF_EVENT_UNKNOWN (or any other value) can't be pushed */
 }
 
-static bool pwf_filter_incoming_event_append(struct pwf_filter_port* port, const pwf_event* event)
+static bool pwf_filter_incoming_event_append(struct pwf_filter_port* port, const struct pwf_event* event)
 {
     if (port->n_incoming_events == port->incoming_events_capacity) {
         size_t new_cap = port->incoming_events_capacity == 0 ? 4 : port->incoming_events_capacity * 2;
-        pwf_event* grown = realloc(port->incoming_events, new_cap * sizeof(*grown));
+        struct pwf_event* grown = realloc(port->incoming_events, new_cap * sizeof(*grown));
         if (!grown)
             return false;
         port->incoming_events = grown;
@@ -88,7 +88,7 @@ void pwf_filter_event_decode(struct pwf_filter_port* port, const void* data, siz
             uint32_t len = 0;
             if (spa_pod_get_bytes(value, &bytes, &len) < 0)
                 continue;
-            pwf_event ev = {
+            struct pwf_event ev = {
                 .offset = c->offset,
                 .kind = (c->type == SPA_CONTROL_Midi) ? PWF_EVENT_MIDI : PWF_EVENT_OSC,
                 .key = NULL,
@@ -105,7 +105,7 @@ void pwf_filter_event_decode(struct pwf_filter_port* port, const void* data, siz
                 const struct pwf_property_entry* entry = pwf_property_find_by_id(p->key);
                 if (!entry)
                     continue; /* property key outside our vocabulary: skipped */
-                pwf_event ev = {
+                struct pwf_event ev = {
                     .offset = c->offset,
                     .kind = PWF_EVENT_PROPERTY,
                     .key = entry->name,
@@ -115,7 +115,7 @@ void pwf_filter_event_decode(struct pwf_filter_port* port, const void* data, siz
                 pwf_filter_incoming_event_append(port, &ev);
             }
         } else {
-            pwf_event ev = {
+            struct pwf_event ev = {
                 .offset = c->offset,
                 .kind = PWF_EVENT_UNKNOWN,
                 .key = NULL,
@@ -146,7 +146,7 @@ void pwf_filter_event_load_delivering_as_incoming(struct pwf_filter_port* port)
     port->n_incoming_events = 0;
     for (size_t i = 0; i < port->n_delivering_events; i++) {
         struct pwf_filter_pending_event* pe = &port->delivering_events[i];
-        pwf_event ev = { pe->offset, pe->kind, pe->key, pe->data, pe->size };
+        struct pwf_event ev = { pe->offset, pe->kind, pe->key, pe->data, pe->size };
         pwf_filter_incoming_event_append(port, &ev);
     }
 }
@@ -168,7 +168,7 @@ void pwf_filter_event_clear_delivering(struct pwf_filter_port* port)
     pwf_filter_event_free_entries(port->delivering_events, &port->n_delivering_events);
 }
 
-static bool pwf_filter_pending_event_append(struct pwf_filter_port* port, const pwf_event* event)
+static bool pwf_filter_pending_event_append(struct pwf_filter_port* port, const struct pwf_event* event)
 {
     if (port->n_pending_events == port->pending_events_capacity) {
         size_t new_cap = port->pending_events_capacity == 0 ? 4 : port->pending_events_capacity * 2;
@@ -254,7 +254,7 @@ void pwf_filter_event_free_port(struct pwf_filter_port* port)
     free(port->incoming_events);
 }
 
-size_t pwf_filter_port_get_event_count(pwf_filter_port_h port_handle)
+size_t pwf_filter_port_get_event_count(struct pwf_filter_port* port_handle)
 {
     struct pwf_filter_port* port = (struct pwf_filter_port*)port_handle;
     if (!port || port->media_type != PWF_DATA_EVENT || port->direction != PWF_FILTER_PORT_INPUT)
@@ -262,7 +262,7 @@ size_t pwf_filter_port_get_event_count(pwf_filter_port_h port_handle)
     return port->n_incoming_events;
 }
 
-int pwf_filter_port_get_event(pwf_filter_port_h port_handle, size_t index, pwf_event* out)
+int pwf_filter_port_get_event(struct pwf_filter_port* port_handle, size_t index, struct pwf_event* out)
 {
     struct pwf_filter_port* port = (struct pwf_filter_port*)port_handle;
     if (!port || port->media_type != PWF_DATA_EVENT || port->direction != PWF_FILTER_PORT_INPUT || !out)
@@ -274,7 +274,7 @@ int pwf_filter_port_get_event(pwf_filter_port_h port_handle, size_t index, pwf_e
     return PWF_OK;
 }
 
-int pwf_filter_port_push_event(pwf_filter_port_h port_handle, const pwf_event* event)
+int pwf_filter_port_push_event(struct pwf_filter_port* port_handle, const struct pwf_event* event)
 {
     struct pwf_filter_port* port = (struct pwf_filter_port*)port_handle;
     if (!port || port->media_type != PWF_DATA_EVENT || !event)

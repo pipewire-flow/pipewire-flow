@@ -1,6 +1,6 @@
 # Filters
 
-`include/pwf/pwf_filter.h` adds a second handle, `pwf_filter_h`, for
+`include/pwf/pwf_filter.h` adds a second handle, `struct pwf_filter*`, for
 combining multiple audio/video sources into one processed output, or for
 building a node other PipeWire clients can route into.
 
@@ -12,22 +12,22 @@ building a node other PipeWire clients can route into.
 ## The filter API
 
 ```c
-pwf_filter_h pwf_filter_create(const char* name, pwf_filter_process_cb callback, void* user_data);
-int pwf_filter_set_error_cb(pwf_filter_h filter, pwf_filter_error_cb callback);
-pwf_filter_port_h pwf_filter_add_audio_port(pwf_filter_h filter, pwf_filter_port_direction direction, const pwf_audio_config* config);
-pwf_filter_port_h pwf_filter_add_video_port(pwf_filter_h filter, pwf_filter_port_direction direction, const pwf_video_config* config);
-pwf_filter_port_h pwf_filter_add_signal_port(pwf_filter_h filter, pwf_filter_port_direction direction);
-pwf_filter_port_h pwf_filter_add_event_port(pwf_filter_h filter, pwf_filter_port_direction direction);
-pwf_data_type pwf_filter_port_get_type(pwf_filter_port_h port);
-int pwf_filter_push_port_data(pwf_filter_h filter, pwf_filter_port_h port, const void* data, size_t size, int64_t pts);
-int pwf_filter_start(pwf_filter_h filter);
-int pwf_filter_stop(pwf_filter_h filter, bool drain);
-void pwf_filter_destroy(pwf_filter_h filter);
+struct pwf_filter* pwf_filter_create(const char* name, pwf_filter_process_func_t callback, void* user_data);
+int pwf_filter_set_error_callback(struct pwf_filter* filter, pwf_filter_error_func_t callback);
+struct pwf_filter_port* pwf_filter_add_audio_port(struct pwf_filter* filter, enum pwf_filter_port_direction direction, const struct pwf_audio_config* config);
+struct pwf_filter_port* pwf_filter_add_video_port(struct pwf_filter* filter, enum pwf_filter_port_direction direction, const struct pwf_video_config* config);
+struct pwf_filter_port* pwf_filter_add_signal_port(struct pwf_filter* filter, enum pwf_filter_port_direction direction);
+struct pwf_filter_port* pwf_filter_add_event_port(struct pwf_filter* filter, enum pwf_filter_port_direction direction);
+enum pwf_data_type pwf_filter_port_get_type(struct pwf_filter_port* port);
+int pwf_filter_push_port_data(struct pwf_filter* filter, struct pwf_filter_port* port, const void* data, size_t size, int64_t pts);
+int pwf_filter_start(struct pwf_filter* filter);
+int pwf_filter_stop(struct pwf_filter* filter, bool drain);
+void pwf_filter_destroy(struct pwf_filter* filter);
 ```
 
 A filter starts empty; ports are added one at a time (each as input or
 output, reusing the same config structs as `pwf_stream` for audio/video),
-and its `pwf_filter_process_cb` is invoked once per cycle with every
+and its `pwf_filter_process_func_t` is invoked once per cycle with every
 port's buffer together, so the callback can read multiple inputs and
 write one output in a single synchronized point. `pwf_filter_push_port_data()`
 lets application code (for example, a `pwf_stream` capture callback) feed
@@ -41,7 +41,7 @@ leaves the staged data, or staged events, to the cycle after it.
 `pwf_filter_port_get_type()` reports which kind a given port handle was
 added as.
 
-Each input port's `pwf_filter_port_buffer` also carries `pts`: the
+Each input port's `struct pwf_filter_port_buffer` also carries `pts`: the
 buffer's capture timestamp in nanoseconds (from the underlying SPA
 node's clock, or from the `pts` a caller passed to
 `pwf_filter_push_port_data()`), or -1 if unavailable. It's always -1 on
@@ -68,15 +68,15 @@ callback:
   buffer fields audio/video ports already use. No format configuration
   is needed.
 - **Event ports** (`pwf_filter_add_event_port`) carry zero or more
-  discrete, time-stamped `pwf_event` items per cycle — MIDI or OSC
+  discrete, time-stamped `struct pwf_event` items per cycle — MIDI or OSC
   messages (real wire-format bytes, for interop with other PipeWire
   MIDI/OSC clients) or property/key-value changes — read and written
   through a small accessor API instead of a raw buffer:
 
   ```c
-  size_t pwf_filter_port_get_event_count(pwf_filter_port_h port);
-  int pwf_filter_port_get_event(pwf_filter_port_h port, size_t index, pwf_event* out);
-  int pwf_filter_port_push_event(pwf_filter_port_h port, const pwf_event* event);
+  size_t pwf_filter_port_get_event_count(struct pwf_filter_port* port);
+  int pwf_filter_port_get_event(struct pwf_filter_port* port, size_t index, struct pwf_event* out);
+  int pwf_filter_port_push_event(struct pwf_filter_port* port, const struct pwf_event* event);
   ```
 
   On an input event port, `pwf_filter_port_push_event()` stages an event
@@ -98,15 +98,15 @@ of a CPU-mapped buffer, and any input port can *hold* its most recent
 buffer across cycles where no new data arrives:
 
 ```c
-typedef enum { PWF_PORT_MEMORY_AUTO, PWF_PORT_MEMORY_DMABUF } pwf_port_memory;
-typedef struct { pwf_port_memory memory; } pwf_filter_port_opts;
-typedef struct { int fd; uint32_t offset; uint32_t stride; uint32_t size; } pwf_dmabuf_plane;
+enum pwf_port_memory { PWF_PORT_MEMORY_AUTO, PWF_PORT_MEMORY_DMABUF };
+struct pwf_filter_port_opts { enum pwf_port_memory memory; };
+struct pwf_dmabuf_plane { int fd; uint32_t offset; uint32_t stride; uint32_t size; };
 
-pwf_filter_port_h pwf_filter_add_video_port_ex(pwf_filter_h filter, pwf_filter_port_direction direction,
-                                               const pwf_video_config* config, const pwf_filter_port_opts* opts);
-size_t pwf_filter_port_get_dmabuf_planes(const pwf_filter_port_buffer* buf, pwf_dmabuf_plane* planes, size_t planes_len);
-int pwf_filter_port_set_hold(pwf_filter_port_h port, bool enable);
-int pwf_filter_set_period_hint(pwf_filter_h filter, uint32_t max_period_ns);
+struct pwf_filter_port* pwf_filter_add_video_port_ex(struct pwf_filter* filter, enum pwf_filter_port_direction direction,
+                                                     const struct pwf_video_config* config, const struct pwf_filter_port_opts* opts);
+size_t pwf_filter_port_get_dmabuf_planes(const struct pwf_filter_port_buffer* buf, struct pwf_dmabuf_plane* planes, size_t planes_len);
+int pwf_filter_port_set_hold(struct pwf_filter_port* port, bool enable);
+int pwf_filter_set_period_hint(struct pwf_filter* filter, uint32_t max_period_ns);
 ```
 
 - **DMABUF import** — `pwf_filter_add_video_port_ex()` with
@@ -122,7 +122,7 @@ int pwf_filter_set_period_hint(pwf_filter_h filter, uint32_t max_period_ns);
 - **Hold + freshness** — `pwf_filter_port_set_hold(port, true)` (before
   start) makes an input port re-present its single most recent buffer (the
   same DMABUF fd) on cycles with no new data, so a slow camera stays in
-  every bundle alongside a faster source. Each `pwf_filter_port_buffer`
+  every bundle alongside a faster source. Each `struct pwf_filter_port_buffer`
   carries `bool fresh` (true only for a newly arrived buffer) and
   `uint64_t seq` (advances only on new data), so the callback can tell a
   held buffer from a fresh one and count how long it has been held.
@@ -164,8 +164,8 @@ PipeWire **core link** — no `pw-link` call and no session-manager routing
 policy, so an application wires its own graph:
 
 ```c
-int pwf_filter_port_link(pwf_filter_port_h port, const char* target);
-int pwf_filter_port_unlink(pwf_filter_port_h port);
+int pwf_filter_port_link(struct pwf_filter_port* port, const char* target);
+int pwf_filter_port_unlink(struct pwf_filter_port* port);
 ```
 
 - **Target syntax** — `target` is a node name, an `object.serial` (a string
@@ -220,20 +220,20 @@ the format a port declares must be one the device actually has, exactly.
 before the port exists:
 
 ```c
-pwf_filter_h filter = pwf_filter_create("my-filter", on_process, NULL);
+struct pwf_filter* filter = pwf_filter_create("my-filter", on_process, NULL);
 
-pwf_video_format_info fmts[32];
+struct pwf_video_format_info fmts[32];
 size_t n = 0;
 if (pwf_filter_get_target_video_formats(filter, target, fmts, 32, &n) != PWF_OK || n == 0)
     return; /* an error means the query failed; 0 means the device named nothing usable */
 
-pwf_video_config cfg = {
+struct pwf_video_config cfg = {
     .width        = fmts[0].width,
     .height       = fmts[0].height,
     .pixel_format = fmts[0].pixel_format,
     .fps          = fmts[0].n_fps ? fmts[0].fps[0] : 0,
 };
-pwf_filter_port_h port = pwf_filter_add_video_port(filter, PWF_FILTER_PORT_INPUT, &cfg);
+struct pwf_filter_port* port = pwf_filter_add_video_port(filter, PWF_FILTER_PORT_INPUT, &cfg);
 
 pwf_filter_start(filter);
 pwf_filter_port_link(port, target);   /* same target string */

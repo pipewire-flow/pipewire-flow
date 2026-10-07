@@ -26,7 +26,7 @@ struct counters {
     int error_code;
 };
 
-static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     struct counters* c = user_data;
     c->frames++;
@@ -35,14 +35,14 @@ static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* use
     if (buf->pts >= 0)
         c->saw_pts++;
 
-    pwf_dmabuf_plane plane;
+    struct pwf_dmabuf_plane plane;
     if (pwf_stream_get_dmabuf_planes(stream, &plane, 1) > 0) {
         c->dmabuf_frames++;
         c->last_fd = plane.fd;
     }
 }
 
-static void on_error(pwf_stream_h stream, int error_code, void* user_data)
+static void on_error(struct pwf_stream* stream, int error_code, void* user_data)
 {
     (void)stream;
     struct counters* c = user_data;
@@ -55,13 +55,13 @@ struct plane_counters {
     bool offsets_increase;
 };
 
-static void on_plane_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void on_plane_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)buf;
     struct plane_counters* c = user_data;
     c->frames++;
 
-    pwf_dmabuf_plane planes[4];
+    struct pwf_dmabuf_plane planes[4];
     size_t n = pwf_stream_get_dmabuf_planes(stream, planes, 4);
     if (n > c->max_planes)
         c->max_planes = (unsigned)n;
@@ -75,13 +75,13 @@ static void on_plane_data(pwf_stream_h stream, const pwf_stream_buffer* buf, voi
 static void check_multiplane_format(const char* camera, const char* pixel_format, unsigned expect_planes)
 {
     struct plane_counters c = { 0 };
-    pwf_stream_h s = pwf_stream_create(PWF_DATA_VIDEO, on_plane_data, &c);
+    struct pwf_stream* s = pwf_stream_create(PWF_DATA_VIDEO, on_plane_data, &c);
     if (!s)
         return;
 
     pwf_stream_set_autoconnect(s, false);
-    pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = pixel_format, .fps = 30 };
-    pwf_stream_dmabuf_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = pixel_format, .fps = 30 };
+    struct pwf_stream_dmabuf_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
     if (pwf_stream_set_video_config_ex(s, &cfg, &opts) != PWF_OK || pwf_stream_start(s) != PWF_OK ||
         pwf_stream_link(s, camera) != PWF_OK) {
         printf("%s: camera rejected the request, skipping\n", pixel_format);
@@ -113,17 +113,17 @@ int main(void)
     printf("capturing from: %s\n", camera);
 
     struct counters c = { .last_fd = -1 };
-    pwf_stream_h stream = pwf_stream_create(PWF_DATA_VIDEO, on_data, &c);
+    struct pwf_stream* stream = pwf_stream_create(PWF_DATA_VIDEO, on_data, &c);
     if (!stream) {
         printf("no PipeWire connection, skipping\n");
         return TEST_SKIP;
     }
 
-    PWF_ASSERT_EQ(pwf_stream_set_error_cb(stream, on_error), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_error_callback(stream, on_error), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_set_autoconnect(stream, false), PWF_OK);
 
-    pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
-    pwf_stream_dmabuf_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
+    struct pwf_stream_dmabuf_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
     PWF_ASSERT_EQ(pwf_stream_set_video_config_ex(stream, &cfg, &opts), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_start(stream), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_link(stream, camera), PWF_OK);

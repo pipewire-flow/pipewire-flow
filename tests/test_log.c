@@ -11,12 +11,12 @@
 #include "pwf_test.h"
 
 static int g_calls = 0;
-static pwf_log_level g_last_level;
+static enum pwf_log_level g_last_level;
 static int g_last_line;
 static char g_last_file[256];
 static char g_last_message[512];
 
-static void capture_cb(pwf_log_level level, const char* file, int line, const char* message, void* user_data)
+static void capture_cb(enum pwf_log_level level, const char* file, int line, const char* message, void* user_data)
 {
     PWF_ASSERT_EQ((intptr_t)user_data, (intptr_t)0x1234);
     g_calls++;

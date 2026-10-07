@@ -9,7 +9,8 @@ static int g_calls = 0;
 static size_t g_last_size = 0;
 static int64_t g_last_pts = 0;
 
-static void process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers, void* user_data)
+static void process_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
+                       void* user_data)
 {
     (void)filter;
     (void)user_data;
@@ -24,12 +25,12 @@ static void process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, siz
 
 int main(void)
 {
-    pwf_filter_h filter = pwf_filter_create("pwf-test-push", process_cb, NULL);
+    struct pwf_filter* filter = pwf_filter_create("pwf-test-push", process_cb, NULL);
     PWF_ASSERT(filter != NULL);
 
-    pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
-    pwf_filter_port_h in_port = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT, &cfg);
-    pwf_filter_port_h out_port = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_OUTPUT, &cfg);
+    struct pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
+    struct pwf_filter_port* in_port = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT, &cfg);
+    struct pwf_filter_port* out_port = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_OUTPUT, &cfg);
     PWF_ASSERT(in_port != NULL);
     PWF_ASSERT(out_port != NULL);
 

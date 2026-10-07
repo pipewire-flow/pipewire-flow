@@ -5,14 +5,14 @@
 
 #include "pwf/pwf_stream.h"
 
-static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)buf;
     (void)user_data;
 }
 
-static void on_fill(pwf_stream_h stream, pwf_stream_playback_buffer* buf, void* user_data)
+static void on_fill(struct pwf_stream* stream, struct pwf_stream_playback_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)user_data;
@@ -21,9 +21,9 @@ static void on_fill(pwf_stream_h stream, pwf_stream_playback_buffer* buf, void* 
 
 /* Video sources also report what they deliver. There is no audio equivalent:
  * a stream converts audio, so a device's own list would describe nothing. */
-static void print_formats(pwf_stream_h stream, const char* target)
+static void print_formats(struct pwf_stream* stream, const char* target)
 {
-    pwf_video_format_info fmts[64];
+    struct pwf_video_format_info fmts[64];
     size_t n = 0;
     int res = pwf_stream_get_target_video_formats(stream, target, fmts, 64, &n);
     if (res != PWF_OK) {
@@ -36,7 +36,7 @@ static void print_formats(pwf_stream_h stream, const char* target)
     }
 
     for (size_t i = 0; i < n && i < 64; i++) {
-        const pwf_video_format_info* f = &fmts[i];
+        const struct pwf_video_format_info* f = &fmts[i];
         printf("      %-5s %dx%d", f->pixel_format, f->width, f->height);
         if (f->width_max != f->width || f->height_max != f->height)
             printf("..%dx%d", f->width_max, f->height_max);
@@ -49,14 +49,14 @@ static void print_formats(pwf_stream_h stream, const char* target)
         printf("      ... (%zu formats)\n", n);
 }
 
-static void print_targets(const char* label, pwf_stream_h stream, bool with_formats)
+static void print_targets(const char* label, struct pwf_stream* stream, bool with_formats)
 {
     if (!stream) {
         fprintf(stderr, "%s: failed to create stream (is PipeWire running?)\n", label);
         return;
     }
 
-    pwf_target_info targets[32];
+    struct pwf_target_info targets[32];
     size_t n = 0;
     int res = pwf_stream_get_target_list(stream, targets, 32, &n);
     if (res != PWF_OK) {

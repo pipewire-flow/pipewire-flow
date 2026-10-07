@@ -9,11 +9,11 @@
 #include "pwf_log_internal.h"
 
 static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
-static pwf_log_cb g_callback = NULL;
+static pwf_log_func_t g_callback = NULL;
 static void* g_user_data = NULL;
-static pwf_log_level g_level = PWF_LOG_WARNING;
+static enum pwf_log_level g_level = PWF_LOG_WARNING;
 
-void pwf_log_set_callback(pwf_log_cb callback, void* user_data)
+void pwf_log_set_callback(pwf_log_func_t callback, void* user_data)
 {
     pthread_mutex_lock(&g_lock);
     g_callback = callback;
@@ -21,14 +21,14 @@ void pwf_log_set_callback(pwf_log_cb callback, void* user_data)
     pthread_mutex_unlock(&g_lock);
 }
 
-void pwf_log_set_level(pwf_log_level level)
+void pwf_log_set_level(enum pwf_log_level level)
 {
     pthread_mutex_lock(&g_lock);
     g_level = level;
     pthread_mutex_unlock(&g_lock);
 }
 
-static const char* pwf_log_level_name(pwf_log_level level)
+static const char* pwf_log_level_name(enum pwf_log_level level)
 {
     switch (level) {
     case PWF_LOG_ERROR:   return "error";
@@ -49,11 +49,11 @@ static const char* pwf_log_basename(const char* path)
     return slash ? slash + 1 : path;
 }
 
-void pwf_log_emit(pwf_log_level level, const char* file, int line, const char* fmt, ...)
+void pwf_log_emit(enum pwf_log_level level, const char* file, int line, const char* fmt, ...)
 {
     pthread_mutex_lock(&g_lock);
     bool pass = level <= g_level;
-    pwf_log_cb callback = g_callback;
+    pwf_log_func_t callback = g_callback;
     void* user_data = g_user_data;
     pthread_mutex_unlock(&g_lock);
 

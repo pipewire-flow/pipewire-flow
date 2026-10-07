@@ -16,7 +16,7 @@
  * site's file/line; dropped if less severe than the configured
  * minimum level. Called through the pwf_log_<level>() macros below,
  * which supply __FILE__/__LINE__ automatically. */
-void pwf_log_emit(pwf_log_level level, const char* file, int line, const char* fmt, ...) PWF_LOG_PRINTF_FMT(4, 5);
+void pwf_log_emit(enum pwf_log_level level, const char* file, int line, const char* fmt, ...) PWF_LOG_PRINTF_FMT(4, 5);
 
 /* Mirrors PipeWire's own pw_log_error()/pw_log_warn()/... naming. */
 #define pwf_log_error(...) pwf_log_emit(PWF_LOG_ERROR, __FILE__, __LINE__, __VA_ARGS__)

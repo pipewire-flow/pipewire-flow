@@ -29,14 +29,15 @@ struct counters {
     bool seen_fresh;
 };
 
-static void on_process(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers, void* user_data)
+static void on_process(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
+                       void* user_data)
 {
     (void)filter;
     struct counters* c = user_data;
     c->cycles++;
 
     for (size_t i = 0; i < n_buffers; i++) {
-        pwf_dmabuf_plane plane;
+        struct pwf_dmabuf_plane plane;
         if (pwf_filter_port_get_dmabuf_planes(&buffers[i], &plane, 1) > 0) {
             c->dmabuf_frames++;
             c->last_fd = plane.fd;
@@ -52,7 +53,7 @@ static void on_process(pwf_filter_h filter, pwf_filter_port_buffer* buffers, siz
 }
 
 /* Counts mapped buffers, for the shared-source test's plain ports. */
-static void on_process_count(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers,
+static void on_process_count(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
                               void* user_data)
 {
     (void)filter;
@@ -71,9 +72,9 @@ static void test_shared_source(const char* target, bool video)
 {
     enum { N = 3 };
     unsigned received[N] = { 0 };
-    pwf_filter_h filter[N];
-    pwf_filter_port_h port[N];
-    pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
+    struct pwf_filter* filter[N];
+    struct pwf_filter_port* port[N];
+    struct pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
 
     for (int i = 0; i < N; i++) {
         filter[i] = pwf_filter_create("pwf-hw-shared", on_process_count, &received[i]);
@@ -106,16 +107,16 @@ static void test_shared_source(const char* target, bool video)
 static void test_video_link(const char* camera, const char* mic)
 {
     struct counters c = { .last_fd = -1 };
-    pwf_filter_h filter = pwf_filter_create("pwf-hw-video", on_process, &c);
+    struct pwf_filter* filter = pwf_filter_create("pwf-hw-video", on_process, &c);
     PWF_ASSERT(filter != NULL);
 
-    pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
-    pwf_filter_port_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
-    pwf_filter_port_h video_in = pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &cfg, &opts);
+    struct pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
+    struct pwf_filter_port_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_filter_port* video_in = pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &cfg, &opts);
     PWF_ASSERT(video_in != NULL);
     PWF_ASSERT_EQ(pwf_filter_port_set_hold(video_in, true), PWF_OK);
 
-    pwf_filter_port_h sig_in = mic ? pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT) : NULL;
+    struct pwf_filter_port* sig_in = mic ? pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT) : NULL;
     PWF_ASSERT(!mic || sig_in != NULL);
     PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
 
@@ -162,10 +163,10 @@ static void test_video_link(const char* camera, const char* mic)
 static void test_audio_link(const char* mic)
 {
     struct counters c = { .last_fd = -1 };
-    pwf_filter_h filter = pwf_filter_create("pwf-hw-audio", on_process, &c);
+    struct pwf_filter* filter = pwf_filter_create("pwf-hw-audio", on_process, &c);
     PWF_ASSERT(filter != NULL);
 
-    pwf_filter_port_h sig_in = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
+    struct pwf_filter_port* sig_in = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
     PWF_ASSERT(sig_in != NULL);
     PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
 
@@ -189,11 +190,11 @@ static void test_audio_link(const char* mic)
 static void test_audio_raw_is_incompatible(const char* mic)
 {
     struct counters c = { .last_fd = -1 };
-    pwf_filter_h filter = pwf_filter_create("pwf-hw-audio-raw", on_process, &c);
+    struct pwf_filter* filter = pwf_filter_create("pwf-hw-audio-raw", on_process, &c);
     PWF_ASSERT(filter != NULL);
 
-    pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2, .format = "F32" };
-    pwf_filter_port_h audio_in = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT, &cfg);
+    struct pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2, .format = "F32" };
+    struct pwf_filter_port* audio_in = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT, &cfg);
     PWF_ASSERT(audio_in != NULL);
     PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
 

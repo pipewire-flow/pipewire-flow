@@ -21,7 +21,7 @@ static int64_t g_pts;
 static int g_calls;
 static size_t g_report; /* what the callback claims it wrote */
 
-static void fill_cb(pwf_stream_h stream, pwf_stream_playback_buffer* buf, void* user_data)
+static void fill_cb(struct pwf_stream* stream, struct pwf_stream_playback_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)user_data;
@@ -38,7 +38,7 @@ static void fill_cb(pwf_stream_h stream, pwf_stream_playback_buffer* buf, void* 
  * needed. pwf_stream_set_audio_config() would connect; this does not. */
 static struct pwf_stream* make_stream(void)
 {
-    pwf_stream_h handle = pwf_stream_create_playback(fill_cb, NULL);
+    struct pwf_stream* handle = pwf_stream_create_playback(fill_cb, NULL);
     PWF_ASSERT(handle != NULL);
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     stream->format.audio.sample_rate = RATE;
@@ -79,7 +79,7 @@ static void test_full_fill(void)
     for (size_t i = 0; i < sizeof(region); i++)
         PWF_ASSERT_EQ(region[i], 0xAB);
 
-    pwf_stream_destroy((pwf_stream_h)stream);
+    pwf_stream_destroy(stream);
 }
 
 /* A short fill keeps what the callback wrote and silences the rest. */
@@ -98,7 +98,7 @@ static void test_short_fill_is_silenced(void)
     for (size_t i = FRAME * 4; i < sizeof(region); i++)
         PWF_ASSERT_EQ(region[i], 0x00); /* not the 0xFF left behind */
 
-    pwf_stream_destroy((pwf_stream_h)stream);
+    pwf_stream_destroy(stream);
 }
 
 /* Reporting nothing emits a silent cycle rather than stopping. */
@@ -121,7 +121,7 @@ static void test_zero_fill_is_all_silence(void)
     g_report = FRAME;
     PWF_ASSERT_EQ(pwf_stream_playback_fill(stream, region, sizeof(region), -1), (size_t)FRAME);
 
-    pwf_stream_destroy((pwf_stream_h)stream);
+    pwf_stream_destroy(stream);
 }
 
 /* An oversized report is clamped, and nothing past the region is read
@@ -140,7 +140,7 @@ static void test_oversized_report_is_clamped(void)
     for (size_t i = available; i < sizeof(backing); i++)
         PWF_ASSERT_EQ(backing[i], 0x5A);
 
-    pwf_stream_destroy((pwf_stream_h)stream);
+    pwf_stream_destroy(stream);
 }
 
 /* A count that is not a whole number of frames is floored, and the partial
@@ -157,19 +157,19 @@ static void test_partial_frame_is_truncated(void)
     PWF_ASSERT_EQ(written, (size_t)(FRAME * 3));
     PWF_ASSERT_EQ(region[FRAME * 3], 0x00);
 
-    pwf_stream_destroy((pwf_stream_h)stream);
+    pwf_stream_destroy(stream);
 }
 
 /* Direction is decided at creation: the existing constructor still makes a
  * capture stream, and a video format has nothing to connect to on playback. */
 static void test_direction_and_video_rejection(void)
 {
-    pwf_stream_h playback = pwf_stream_create_playback(fill_cb, NULL);
+    struct pwf_stream* playback = pwf_stream_create_playback(fill_cb, NULL);
     PWF_ASSERT(playback != NULL);
     PWF_ASSERT_EQ(((struct pwf_stream*)playback)->direction, PWF_STREAM_DIRECTION_PLAYBACK);
     PWF_ASSERT_EQ(((struct pwf_stream*)playback)->type, PWF_DATA_AUDIO);
 
-    pwf_video_config vcfg = { .width = 640, .height = 480, .pixel_format = "I420", .fps = 30 };
+    struct pwf_video_config vcfg = { .width = 640, .height = 480, .pixel_format = "I420", .fps = 30 };
     PWF_ASSERT_EQ(pwf_stream_set_video_config(playback, &vcfg), PWF_ERR_INVALID_ARG);
     PWF_ASSERT(!((struct pwf_stream*)playback)->format_set);
     pwf_stream_destroy(playback);
@@ -177,7 +177,7 @@ static void test_direction_and_video_rejection(void)
     PWF_ASSERT(pwf_stream_create_playback(NULL, NULL) == NULL);
 }
 
-static void capture_cb(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void capture_cb(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)buf;
@@ -186,12 +186,12 @@ static void capture_cb(pwf_stream_h stream, const pwf_stream_buffer* buf, void* 
 
 static void test_existing_constructor_is_still_capture(void)
 {
-    pwf_stream_h audio = pwf_stream_create(PWF_DATA_AUDIO, capture_cb, NULL);
+    struct pwf_stream* audio = pwf_stream_create(PWF_DATA_AUDIO, capture_cb, NULL);
     PWF_ASSERT(audio != NULL);
     PWF_ASSERT_EQ(((struct pwf_stream*)audio)->direction, PWF_STREAM_DIRECTION_CAPTURE);
     pwf_stream_destroy(audio);
 
-    pwf_stream_h video = pwf_stream_create(PWF_DATA_VIDEO, capture_cb, NULL);
+    struct pwf_stream* video = pwf_stream_create(PWF_DATA_VIDEO, capture_cb, NULL);
     PWF_ASSERT(video != NULL);
     PWF_ASSERT_EQ(((struct pwf_stream*)video)->direction, PWF_STREAM_DIRECTION_CAPTURE);
     pwf_stream_destroy(video);
@@ -201,7 +201,7 @@ static void test_existing_constructor_is_still_capture(void)
  * and clearing it returns the stream to the default device. */
 static void test_target_selection(void)
 {
-    pwf_stream_h handle = pwf_stream_create_playback(fill_cb, NULL);
+    struct pwf_stream* handle = pwf_stream_create_playback(fill_cb, NULL);
     PWF_ASSERT(handle != NULL);
     struct pwf_stream* stream = (struct pwf_stream*)handle;
 
@@ -221,7 +221,7 @@ static void test_target_selection(void)
  * capture, so a playback stream cannot run without a negotiated cycle. */
 static void test_start_requires_a_format(void)
 {
-    pwf_stream_h handle = pwf_stream_create_playback(fill_cb, NULL);
+    struct pwf_stream* handle = pwf_stream_create_playback(fill_cb, NULL);
     PWF_ASSERT(handle != NULL);
 
     PWF_ASSERT_EQ(pwf_stream_start(handle), PWF_ERR_NOT_CONFIGURED);
@@ -245,7 +245,7 @@ static void test_overrun_log_is_rate_limited(void)
     PWF_ASSERT(pwf_stream_playback_note_overrun(stream, second * 3)); /* interval elapsed */
     PWF_ASSERT_EQ(stream->overrun_suppressed, (uint64_t)2); /* the caller clears after logging */
 
-    pwf_stream_destroy((pwf_stream_h)stream);
+    pwf_stream_destroy(stream);
 }
 
 int main(void)

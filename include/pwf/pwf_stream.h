@@ -21,20 +21,20 @@ extern "C" {
 #endif
 
 /** @brief Opaque handle to one audio- or video-capture stream. */
-typedef struct pwf_stream* pwf_stream_h;
+struct pwf_stream;
 
 /**
  * @brief One delivered buffer of captured audio samples or a video frame.
  *
  * A struct (rather than loose parameters) so future fields can be added
- * without changing pwf_stream_data_cb's signature. `data`/`size`/`pts` are
+ * without changing pwf_stream_data_func_t's signature. `data`/`size`/`pts` are
  * valid only for the duration of the data callback.
  */
-typedef struct {
+struct pwf_stream_buffer {
     void* data;  /**< Captured bytes, or NULL when the stream negotiated DMABUF (see pwf_stream_get_dmabuf_planes()). */
     size_t size; /**< Bytes available at `data`; 0 when `data` is NULL. */
     int64_t pts; /**< Capture timestamp in nanoseconds (the driver clock used by the underlying SPA node, e.g. ALSA or V4L2), or -1 if the buffer carried no timestamp metadata. */
-} pwf_stream_buffer;
+};
 
 /**
  * @brief Delivers one buffer of captured audio samples or a video frame.
@@ -49,7 +49,7 @@ typedef struct {
  * @param buf       This cycle's buffer; valid only for the duration of this call.
  * @param user_data The pointer passed to pwf_stream_create().
  */
-typedef void (*pwf_stream_data_cb)(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data);
+typedef void (*pwf_stream_data_func_t)(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data);
 
 /**
  * @brief One cycle's writable region for a playback stream.
@@ -57,12 +57,12 @@ typedef void (*pwf_stream_data_cb)(pwf_stream_h stream, const pwf_stream_buffer*
  * `data`, `available` and `pts` are set by the library; the callback sets
  * `size`.
  */
-typedef struct {
+struct pwf_stream_playback_buffer {
     void* data;       /**< Writable region for this cycle, never NULL. */
     size_t available; /**< Bytes the callback may write this cycle: what the device asked for, or the region's full size when the graph states no request. Not the region's capacity — it is usually smaller. */
     int64_t pts;      /**< When this cycle's first sample is expected to be heard, in monotonic nanoseconds, or -1 if the graph cannot state one. The mirror of the capture buffer's pts, not the same thing: capture reports when samples were taken, playback when they will be played. */
     size_t size;      /**< Set by the callback: bytes actually written. Clamped to `available` and floored to whole frames; the remainder up to `available` is emitted as silence, so 0 emits a silent cycle rather than stopping. */
-} pwf_stream_playback_buffer;
+};
 
 /**
  * @brief Asks the application to fill one cycle of audio.
@@ -70,14 +70,14 @@ typedef struct {
  * Runs on the real-time data thread: it MUST NOT block, allocate, or
  * perform I/O. A cycle whose callback runs past its budget is emitted as
  * silence and recorded in the library log, not reported through
- * pwf_stream_error_cb. The calls pwf_stream_data_cb refuses are refused here too.
+ * pwf_stream_error_func_t. The calls pwf_stream_data_func_t refuses are refused here too.
  *
  * @param stream    The playback stream asking for data.
  * @param buf       This cycle's writable region; valid only for the duration of this call.
  * @param user_data The pointer passed to pwf_stream_create_playback().
  */
-typedef void (*pwf_stream_playback_cb)(pwf_stream_h stream, pwf_stream_playback_buffer* buf,
-                                        void* user_data);
+typedef void (*pwf_stream_playback_func_t)(struct pwf_stream* stream, struct pwf_stream_playback_buffer* buf,
+                                            void* user_data);
 
 /**
  * @brief Reports that `stream`'s source became unavailable while running.
@@ -89,10 +89,10 @@ typedef void (*pwf_stream_playback_cb)(pwf_stream_h stream, pwf_stream_playback_
  * and only logs, so re-route or destroy the stream after the callback returns.
  *
  * @param stream     The affected stream.
- * @param error_code A pwf_error, currently always PWF_ERR_SOURCE_UNAVAILABLE.
+ * @param error_code An enum pwf_error, currently always PWF_ERR_SOURCE_UNAVAILABLE.
  * @param user_data  The pointer passed to pwf_stream_create()/pwf_stream_create_playback().
  */
-typedef void (*pwf_stream_error_cb)(pwf_stream_h stream, int error_code, void* user_data);
+typedef void (*pwf_stream_error_func_t)(struct pwf_stream* stream, int error_code, void* user_data);
 
 /**
  * @brief Creates a stream of `type`.
@@ -104,7 +104,7 @@ typedef void (*pwf_stream_error_cb)(pwf_stream_h stream, int error_code, void* u
  * @param user_data Passed unchanged to `callback`.
  * @return A new stream handle, or NULL if PipeWire cannot be reached or `type` is rejected.
  */
-PWF_API pwf_stream_h pwf_stream_create(pwf_data_type type, pwf_stream_data_cb callback, void* user_data);
+PWF_API struct pwf_stream* pwf_stream_create(enum pwf_data_type type, pwf_stream_data_func_t callback, void* user_data);
 
 /**
  * @brief Creates an audio playback stream, emitting to an output device
@@ -113,14 +113,14 @@ PWF_API pwf_stream_h pwf_stream_create(pwf_data_type type, pwf_stream_data_cb ca
  * Audio only: with no media type parameter a video playback stream cannot
  * be expressed. Owns its own PipeWire thread-loop/context/core and fails
  * fast exactly as pwf_stream_create() does. The result is used with the
- * same set_error_cb/set_target/set_audio_config/start/stop/destroy calls;
+ * same set_error_callback/set_target/set_audio_config/start/stop/destroy calls;
  * pwf_stream_set_video_config() is rejected on it.
  *
  * @param callback  Invoked once per cycle to fill the next block of audio.
  * @param user_data Passed unchanged to `callback`.
  * @return A new playback stream handle, or NULL if PipeWire cannot be reached.
  */
-PWF_API pwf_stream_h pwf_stream_create_playback(pwf_stream_playback_cb callback, void* user_data);
+PWF_API struct pwf_stream* pwf_stream_create_playback(pwf_stream_playback_func_t callback, void* user_data);
 
 /**
  * @brief Registers (or clears, with NULL) the optional async-error callback.
@@ -128,7 +128,7 @@ PWF_API pwf_stream_h pwf_stream_create_playback(pwf_stream_playback_cb callback,
  * @param callback The callback to invoke on source loss, or NULL to clear it.
  * @return PWF_OK, or PWF_ERR_INVALID_ARG for a NULL `stream`.
  */
-PWF_API int pwf_stream_set_error_cb(pwf_stream_h stream, pwf_stream_error_cb callback);
+PWF_API int pwf_stream_set_error_callback(struct pwf_stream* stream, pwf_stream_error_func_t callback);
 
 /**
  * @brief Sets (or clears, with NULL) the PipeWire node this stream should
@@ -147,7 +147,7 @@ PWF_API int pwf_stream_set_error_cb(pwf_stream_h stream, pwf_stream_error_cb cal
  * @param target A node name or object.serial, or NULL to clear a previously set target.
  * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL `stream` or for a non-NULL `target` while autoconnect is off, or PWF_ERR_NO_MEMORY when the name cannot be copied.
  */
-PWF_API int pwf_stream_set_target(pwf_stream_h stream, const char* target);
+PWF_API int pwf_stream_set_target(struct pwf_stream* stream, const char* target);
 
 /**
  * @brief Sets (or clears, with NULL) the media role this stream declares,
@@ -163,17 +163,17 @@ PWF_API int pwf_stream_set_target(pwf_stream_h stream, const char* target);
  * @param role   A role name, or NULL to clear a previously set role.
  * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL `stream`, or PWF_ERR_NO_MEMORY when the role cannot be copied.
  */
-PWF_API int pwf_stream_set_role(pwf_stream_h stream, const char* role);
+PWF_API int pwf_stream_set_role(struct pwf_stream* stream, const char* role);
 
 /**
  * @brief One target pwf_stream_set_target()/pwf_stream_link() would
  *        accept, discovered from the running graph.
  */
-typedef struct {
+struct pwf_target_info {
     char name[256];        /**< Node name, usable directly as a target string. */
     char serial[32];       /**< The node's object.serial as decimal digits, also usable directly as a target string — an alternative to `name` when two nodes share one. */
     char description[256]; /**< Human-readable node.description (what wpctl status shows), or "" if the node never set one. */
-} pwf_target_info;
+};
 
 /**
  * @brief Lists targets pwf_stream_set_target()/pwf_stream_link() would
@@ -191,7 +191,7 @@ typedef struct {
  * @param[out] found   The target count actually available, which may exceed `out_len` if it was too small; 0 on failure. A graph with no such node is PWF_OK with 0, not an error.
  * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL `stream` or `found`, PWF_ERR_IN_CALLBACK from inside a callback, PWF_ERR_TIMEOUT when the registry does not answer in time, or PWF_ERR_CONNECT_FAILED when it cannot be reached.
  */
-PWF_API int pwf_stream_get_target_list(pwf_stream_h stream, pwf_target_info* out, size_t out_len,
+PWF_API int pwf_stream_get_target_list(struct pwf_stream* stream, struct pwf_target_info* out, size_t out_len,
                                         size_t* found);
 
 /**
@@ -210,8 +210,8 @@ PWF_API int pwf_stream_get_target_list(pwf_stream_h stream, pwf_target_info* out
  * @param[out] found   The format count actually available, which may exceed `out_len` if it was too small; 0 on failure. A device reporting no format this library can name is PWF_OK with 0, not an error.
  * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL or non-video stream, a NULL `found`, or no target to read, PWF_ERR_NOT_FOUND for a target naming no node, PWF_ERR_IN_CALLBACK from inside a callback, PWF_ERR_TIMEOUT when the query does not answer in time, or PWF_ERR_CONNECT_FAILED when it fails.
  */
-PWF_API int pwf_stream_get_target_video_formats(pwf_stream_h stream, const char* target,
-                                                 pwf_video_format_info* out, size_t out_len,
+PWF_API int pwf_stream_get_target_video_formats(struct pwf_stream* stream, const char* target,
+                                                 struct pwf_video_format_info* out, size_t out_len,
                                                  size_t* found);
 
 /**
@@ -229,7 +229,7 @@ PWF_API int pwf_stream_get_target_video_formats(pwf_stream_h stream, const char*
  * @param enable false to opt out of autoconnect (manual wiring via pwf_stream_link()); true puts the stream back under the session manager, and leaves any target already set in place.
  * @return PWF_OK, or PWF_ERR_INVALID_ARG for a NULL `stream`, a format already set, or `enable` false while a target is set.
  */
-PWF_API int pwf_stream_set_autoconnect(pwf_stream_h stream, bool enable);
+PWF_API int pwf_stream_set_autoconnect(struct pwf_stream* stream, bool enable);
 
 /**
  * @brief Connects every channel of `stream` to `target` — a node name or
@@ -252,9 +252,9 @@ PWF_API int pwf_stream_set_autoconnect(pwf_stream_h stream, bool enable);
  *
  * @param stream The running stream to wire, with autoconnect off.
  * @param target A node name or an object.serial.
- * @return PWF_OK, or a pwf_error: NOT_CONFIGURED before start, INVALID_ARG for a bad mode, target string or channel count or an already-linked stream, NOT_FOUND for a target naming no node, IN_CALLBACK from inside a callback, TIMEOUT when the stream's ports or a link do not appear in time, INVALID_FORMAT when a link fails to negotiate, NO_MEMORY when an allocation fails, CONNECT_FAILED when a link cannot be created.
+ * @return PWF_OK, or an enum pwf_error: NOT_CONFIGURED before start, INVALID_ARG for a bad mode, target string or channel count or an already-linked stream, NOT_FOUND for a target naming no node, IN_CALLBACK from inside a callback, TIMEOUT when the stream's ports or a link do not appear in time, INVALID_FORMAT when a link fails to negotiate, NO_MEMORY when an allocation fails, CONNECT_FAILED when a link cannot be created.
  */
-PWF_API int pwf_stream_link(pwf_stream_h stream, const char* target);
+PWF_API int pwf_stream_link(struct pwf_stream* stream, const char* target);
 
 /**
  * @brief Releases every link created on `stream`.
@@ -267,7 +267,7 @@ PWF_API int pwf_stream_link(pwf_stream_h stream, const char* target);
  * @param stream The stream to unlink.
  * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL `stream`, PWF_ERR_NOT_CONFIGURED when the stream has no links, or PWF_ERR_IN_CALLBACK from its data callback.
  */
-PWF_API int pwf_stream_unlink(pwf_stream_h stream);
+PWF_API int pwf_stream_unlink(struct pwf_stream* stream);
 
 /**
  * @brief Configures audio format before starting an audio stream.
@@ -275,7 +275,7 @@ PWF_API int pwf_stream_unlink(pwf_stream_h stream);
  * @param config The requested sample rate, channel count, and sample format.
  * @return PWF_OK, PWF_ERR_INVALID_ARG (NULL stream/config, or not an audio stream), PWF_ERR_INVALID_FORMAT (unrecognized format or out-of-range field), PWF_ERR_IN_CALLBACK (from inside a callback), or PWF_ERR_CONNECT_FAILED.
  */
-PWF_API int pwf_stream_set_audio_config(pwf_stream_h stream, const pwf_audio_config* config);
+PWF_API int pwf_stream_set_audio_config(struct pwf_stream* stream, const struct pwf_audio_config* config);
 
 /**
  * @brief Configures video format before starting a video stream.
@@ -283,7 +283,7 @@ PWF_API int pwf_stream_set_audio_config(pwf_stream_h stream, const pwf_audio_con
  * @param config The requested width, height, pixel format, and frame rate.
  * @return PWF_OK, PWF_ERR_INVALID_ARG (NULL stream/config, or not a video-capture stream), PWF_ERR_INVALID_FORMAT (unrecognized pixel format or out-of-range dimension), PWF_ERR_IN_CALLBACK (from inside a callback), or PWF_ERR_CONNECT_FAILED.
  */
-PWF_API int pwf_stream_set_video_config(pwf_stream_h stream, const pwf_video_config* config);
+PWF_API int pwf_stream_set_video_config(struct pwf_stream* stream, const struct pwf_video_config* config);
 
 /**
  * @brief Per-stream DMABUF options.
@@ -291,10 +291,10 @@ PWF_API int pwf_stream_set_video_config(pwf_stream_h stream, const pwf_video_con
  * A NULL or zeroed struct means AUTO, i.e. the behavior of
  * pwf_stream_set_video_config().
  */
-typedef struct {
-    pwf_port_memory memory; /**< AUTO (default) or DMABUF. */
-    uint32_t reserved[2];   /**< Must be zero; reserved for future options. */
-} pwf_stream_dmabuf_opts;
+struct pwf_stream_dmabuf_opts {
+    enum pwf_port_memory memory; /**< AUTO (default) or DMABUF. */
+    uint32_t reserved[2];        /**< Must be zero; reserved for future options. */
+};
 
 /**
  * @brief Configures video format before starting a video capture stream,
@@ -309,7 +309,7 @@ typedef struct {
  * PWF_ERR_INVALID_ARG.
  *
  * If the source cannot provide DMABUF, negotiation fails asynchronously:
- * the condition is logged and pwf_stream_error_cb (if set) is invoked
+ * the condition is logged and pwf_stream_error_func_t (if set) is invoked
  * with PWF_ERR_SOURCE_UNAVAILABLE, the same path used when a
  * source is lost after connecting. The stream delivers no frames until
  * reconfigured without DMABUF.
@@ -323,14 +323,14 @@ typedef struct {
  * @param opts   DMABUF options, or NULL for AUTO.
  * @return PWF_OK, PWF_ERR_INVALID_ARG (NULL stream/config, not a video-capture stream, or MJPG requested with DMABUF), PWF_ERR_INVALID_FORMAT, PWF_ERR_IN_CALLBACK (from inside a callback), or PWF_ERR_CONNECT_FAILED.
  */
-PWF_API int pwf_stream_set_video_config_ex(pwf_stream_h stream, const pwf_video_config* config,
-                                            const pwf_stream_dmabuf_opts* opts);
+PWF_API int pwf_stream_set_video_config_ex(struct pwf_stream* stream, const struct pwf_video_config* config,
+                                            const struct pwf_stream_dmabuf_opts* opts);
 
 /**
  * @brief Fills up to `planes_len` entries of `planes` with the current
  *        cycle's DMABUF frame layout.
  *
- * Valid only during the data callback (pwf_stream_data_cb). `planes`
+ * Valid only during the data callback (pwf_stream_data_func_t). `planes`
  * comes before `planes_len`, its own capacity, rather than after,
  * keeping the array and its capacity adjacent even though `planes` is
  * the out-parameter here.
@@ -340,14 +340,15 @@ PWF_API int pwf_stream_set_video_config_ex(pwf_stream_h stream, const pwf_video_
  * @param[in]  planes_len Capacity of `planes`.
  * @return The plane count actually available, which may exceed `planes_len` if it was too small; 0 for a non-DMABUF stream or a cycle with no buffer, and `planes` is left unwritten.
  */
-PWF_API size_t pwf_stream_get_dmabuf_planes(pwf_stream_h stream, pwf_dmabuf_plane* planes, size_t planes_len);
+PWF_API size_t pwf_stream_get_dmabuf_planes(struct pwf_stream* stream, struct pwf_dmabuf_plane* planes,
+                                            size_t planes_len);
 
 /**
  * @brief Starts data delivery. Requires a format to already be set.
  * @param stream The stream to start.
  * @return PWF_OK, PWF_ERR_INVALID_ARG (NULL stream), PWF_ERR_IN_CALLBACK (from its data callback), PWF_ERR_NOT_CONFIGURED (no format set), or PWF_ERR_CONNECT_FAILED.
  */
-PWF_API int pwf_stream_start(pwf_stream_h stream);
+PWF_API int pwf_stream_start(struct pwf_stream* stream);
 
 /**
  * @brief Stops data delivery; the stream may be started again later.
@@ -363,7 +364,7 @@ PWF_API int pwf_stream_start(pwf_stream_h stream);
  * @param drain  true to wait for what is already queued to finish first.
  * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL `stream`, or PWF_ERR_IN_CALLBACK for a stop refused inside a callback.
  */
-PWF_API int pwf_stream_stop(pwf_stream_h stream, bool drain);
+PWF_API int pwf_stream_stop(struct pwf_stream* stream, bool drain);
 
 /**
  * @brief Releases all resources owned by `stream`.
@@ -374,7 +375,7 @@ PWF_API int pwf_stream_stop(pwf_stream_h stream, bool drain);
  *
  * @param stream The stream to destroy; NULL is a no-op.
  */
-PWF_API void pwf_stream_destroy(pwf_stream_h stream);
+PWF_API void pwf_stream_destroy(struct pwf_stream* stream);
 
 #ifdef __cplusplus
 }

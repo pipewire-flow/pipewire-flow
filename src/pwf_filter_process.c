@@ -41,11 +41,11 @@ void pwf_filter_on_process(void* data, struct spa_io_position* position)
     if (filter->n_ports == 0)
         return;
 
-    pwf_filter_port_buffer stack_buffers[PWF_FILTER_STACK_PORTS];
+    struct pwf_filter_port_buffer stack_buffers[PWF_FILTER_STACK_PORTS];
     struct pw_buffer* stack_dequeued[PWF_FILTER_STACK_PORTS];
     bool heap_alloc = filter->n_ports > PWF_FILTER_STACK_PORTS;
 
-    pwf_filter_port_buffer* buffers = stack_buffers;
+    struct pwf_filter_port_buffer* buffers = stack_buffers;
     struct pw_buffer** dequeued = stack_dequeued;
     if (heap_alloc) {
         buffers = calloc(filter->n_ports, sizeof(*buffers));
@@ -63,7 +63,7 @@ void pwf_filter_on_process(void* data, struct spa_io_position* position)
 
     for (size_t i = 0; i < filter->n_ports; i++) {
         struct pwf_filter_port* port = filter->ports[i];
-        buffers[i].port = (pwf_filter_port_h)port;
+        buffers[i].port = port;
         buffers[i].data = NULL;
         buffers[i].size = 0;
         buffers[i].capacity = 0;
@@ -186,7 +186,7 @@ void pwf_filter_on_process(void* data, struct spa_io_position* position)
          * not to take this filter's loop lock from inside it. */
         const struct pwf_filter* outer = pwf_filter_processing;
         pwf_filter_processing = filter;
-        filter->process_cb((pwf_filter_h)filter, buffers, filter->n_ports, filter->user_data);
+        filter->process_cb(filter, buffers, filter->n_ports, filter->user_data);
         pwf_filter_processing = outer;
     }
 

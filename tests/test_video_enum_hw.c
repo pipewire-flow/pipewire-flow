@@ -16,7 +16,7 @@
 #define TEST_SKIP 77
 #define MAX_FORMATS 64
 
-/* The pixel format names pwf_video_config documents; nothing else may
+/* The pixel format names struct pwf_video_config documents; nothing else may
  * reach a caller, since nothing else could be passed back. */
 static bool is_known_pixel_format(const char* name)
 {
@@ -28,7 +28,7 @@ static bool is_known_pixel_format(const char* name)
     return false;
 }
 
-static void ignore_data_cb(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void ignore_data_cb(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)buf;
@@ -43,10 +43,10 @@ int main(void)
         return TEST_SKIP;
     }
 
-    pwf_stream_h s = pwf_stream_create(PWF_DATA_VIDEO, ignore_data_cb, NULL);
+    struct pwf_stream* s = pwf_stream_create(PWF_DATA_VIDEO, ignore_data_cb, NULL);
     PWF_ASSERT(s != NULL);
 
-    pwf_video_format_info fmts[MAX_FORMATS];
+    struct pwf_video_format_info fmts[MAX_FORMATS];
     size_t n = 0;
     int res = pwf_stream_get_target_video_formats(s, node, fmts, MAX_FORMATS, &n);
     if (res != PWF_OK) {
@@ -63,10 +63,10 @@ int main(void)
 
     size_t stored = n < MAX_FORMATS ? n : MAX_FORMATS;
     for (size_t i = 0; i < stored; i++) {
-        const pwf_video_format_info* f = &fmts[i];
+        const struct pwf_video_format_info* f = &fmts[i];
 
         /* Entries must be self-consistent and named, or a caller copying one
-         * into a pwf_video_config would be passing on nonsense. */
+         * into a struct pwf_video_config would be passing on nonsense. */
         PWF_ASSERT(is_known_pixel_format(f->pixel_format));
         PWF_ASSERT(f->width > 0 && f->height > 0);
         PWF_ASSERT(f->width_max >= f->width);
@@ -90,8 +90,8 @@ int main(void)
 
     /* The contract itself: hand the first entry back unexamined and the stream
      * must configure. A range's smallest size is offered, always inside it. */
-    const pwf_video_format_info* pick = &fmts[0];
-    pwf_video_config cfg = {
+    const struct pwf_video_format_info* pick = &fmts[0];
+    struct pwf_video_config cfg = {
         .width = pick->width,
         .height = pick->height,
         .pixel_format = pick->pixel_format,
@@ -104,7 +104,7 @@ int main(void)
 
     /* Asking again through a fresh handle, with the target set beforehand
      * and no explicit target passed, must reach the same device. */
-    pwf_stream_h s2 = pwf_stream_create(PWF_DATA_VIDEO, ignore_data_cb, NULL);
+    struct pwf_stream* s2 = pwf_stream_create(PWF_DATA_VIDEO, ignore_data_cb, NULL);
     PWF_ASSERT(s2 != NULL);
     PWF_ASSERT_EQ(pwf_stream_set_target(s2, node), PWF_OK);
     size_t again = 0;
@@ -114,7 +114,7 @@ int main(void)
 
     /* A too-small buffer still reports the true count, so a caller can size
      * an array and ask again. */
-    pwf_video_format_info one;
+    struct pwf_video_format_info one;
     PWF_ASSERT_EQ(pwf_stream_get_target_video_formats(s2, NULL, &one, 1, &again), PWF_OK);
     PWF_ASSERT_EQ(again, n);
     PWF_ASSERT(one.width > 0);

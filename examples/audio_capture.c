@@ -14,14 +14,14 @@ static void on_signal(int sig)
     g_running = 0;
 }
 
-static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)user_data;
     printf("audio: received %zu bytes (pts=%lld ns)\n", buf->size, (long long)buf->pts);
 }
 
-static void on_error(pwf_stream_h stream, int error_code, void* user_data)
+static void on_error(struct pwf_stream* stream, int error_code, void* user_data)
 {
     (void)stream;
     (void)user_data;
@@ -33,15 +33,15 @@ int main(void)
 {
     signal(SIGINT, on_signal);
 
-    pwf_stream_h stream = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
+    struct pwf_stream* stream = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
     if (!stream) {
         fprintf(stderr, "failed to create audio stream (is PipeWire running?)\n");
         return 1;
     }
 
-    pwf_stream_set_error_cb(stream, on_error);
+    pwf_stream_set_error_callback(stream, on_error);
 
-    pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
+    struct pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
     if (pwf_stream_set_audio_config(stream, &cfg) != PWF_OK) {
         fprintf(stderr, "failed to set audio format\n");
         pwf_stream_destroy(stream);

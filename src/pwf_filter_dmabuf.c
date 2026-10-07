@@ -7,7 +7,7 @@
 #include "pwf_log_internal.h"
 #include "pwf_spa_format_internal.h"
 
-size_t pwf_filter_port_get_dmabuf_planes(const pwf_filter_port_buffer* buf, pwf_dmabuf_plane* planes,
+size_t pwf_filter_port_get_dmabuf_planes(const struct pwf_filter_port_buffer* buf, struct pwf_dmabuf_plane* planes,
                                           size_t planes_len)
 {
     if (!buf)
