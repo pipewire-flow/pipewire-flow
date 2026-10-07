@@ -40,7 +40,7 @@ struct pwf_video_format_state {
 
 /* One audio/video capture session, or one audio playback session. */
 struct pwf_stream {
-    pwf_data_type type;
+    enum pwf_data_type type;
     enum pwf_stream_direction direction;
     enum pwf_stream_state state;
     bool format_set;
@@ -70,9 +70,9 @@ struct pwf_stream {
     uint64_t dmabuf_unretrieved_last_log_ns;
     uint64_t dmabuf_unretrieved_suppressed;
 
-    pwf_stream_data_cb data_cb;
-    pwf_stream_playback_cb playback_cb;
-    pwf_stream_error_cb error_cb;
+    pwf_stream_data_func_t data_cb;
+    pwf_stream_playback_func_t playback_cb;
+    pwf_stream_error_func_t error_cb;
     void* user_data;
 
     char* target; /* PW_KEY_TARGET_OBJECT, or NULL for auto-connect */

@@ -73,7 +73,7 @@ static const char* find_sensor(void)
 
 struct run {
     const char* sensor;
-    pwf_filter_port_h port;
+    struct pwf_filter_port* port;
     unsigned cycles;
     unsigned with_data;
     float last_celsius;
@@ -82,7 +82,7 @@ struct run {
     unsigned pts_backwards; /* a later cycle reporting an earlier pts */
 };
 
-static void on_process(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
+static void on_process(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     struct run* r = user_data;
     r->cycles++;
@@ -116,7 +116,7 @@ static void measure(const char* sensor, uint32_t hint_ns, struct run* out)
 {
     struct run r = { .sensor = sensor, .last_celsius = -1.0f };
 
-    pwf_filter_h filter = pwf_filter_create("pwf-hw-sensor-dummy", on_process, &r);
+    struct pwf_filter* filter = pwf_filter_create("pwf-hw-sensor-dummy", on_process, &r);
     PWF_ASSERT(filter != NULL);
 
     r.port = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);

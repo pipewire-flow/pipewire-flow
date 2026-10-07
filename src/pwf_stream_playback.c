@@ -23,10 +23,10 @@ static uint64_t pwf_stream_cycle_budget_ns(const struct pwf_stream* stream, size
 
 size_t pwf_stream_playback_fill(struct pwf_stream* stream, void* data, size_t available, int64_t pts)
 {
-    pwf_stream_playback_buffer buf = { .data = data, .available = available, .pts = pts, .size = 0 };
+    struct pwf_stream_playback_buffer buf = { .data = data, .available = available, .pts = pts, .size = 0 };
 
     uint64_t started = pwf_monotonic_ns();
-    stream->playback_cb((pwf_stream_h)stream, &buf, stream->user_data);
+    stream->playback_cb(stream, &buf, stream->user_data);
     uint64_t finished = pwf_monotonic_ns();
 
     size_t size = buf.size;

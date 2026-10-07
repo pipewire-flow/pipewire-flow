@@ -8,24 +8,24 @@
 #include "pwf_stream_internal.h"
 #include "pwf_test.h"
 
-static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)buf;
     (void)user_data;
 }
 
-static void on_fill(pwf_stream_h stream, pwf_stream_playback_buffer* buf, void* user_data)
+static void on_fill(struct pwf_stream* stream, struct pwf_stream_playback_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)user_data;
     buf->size = 0;
 }
 
-static const pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
+static const struct pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
 
 /* Reads media.role off the connected node, copying it out under the lock. */
-static bool node_role(pwf_stream_h handle, char* out, size_t out_size)
+static bool node_role(struct pwf_stream* handle, char* out, size_t out_size)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     pw_thread_loop_lock(stream->conn.loop);
@@ -42,7 +42,7 @@ static void test_set_and_clear(void)
 {
     PWF_ASSERT_EQ(pwf_stream_set_role(NULL, "Music"), PWF_ERR_INVALID_ARG);
 
-    pwf_stream_h s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
+    struct pwf_stream* s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
     PWF_ASSERT(s != NULL);
     struct pwf_stream* stream = (struct pwf_stream*)s;
     PWF_ASSERT(stream->role == NULL); /* no role until told otherwise */
@@ -65,7 +65,7 @@ static void test_set_and_clear(void)
  * order of the two setters is refused. */
 static void test_accepted_with_autoconnect_off(void)
 {
-    pwf_stream_h s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
+    struct pwf_stream* s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
     PWF_ASSERT(s != NULL);
     PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_set_role(s, "Music"), PWF_OK);
@@ -84,7 +84,7 @@ static void test_role_reaches_the_node(void)
 {
     char role[64];
 
-    pwf_stream_h s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
+    struct pwf_stream* s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
     PWF_ASSERT(s != NULL);
     PWF_ASSERT_EQ(pwf_stream_set_audio_config(s, &cfg), PWF_OK);
     PWF_ASSERT(!node_role(s, role, sizeof(role)));
@@ -98,7 +98,7 @@ static void test_role_reaches_the_node(void)
     PWF_ASSERT_EQ(strcmp(role, "Communication"), 0);
     pwf_stream_destroy(s);
 
-    pwf_stream_h p = pwf_stream_create_playback(on_fill, NULL);
+    struct pwf_stream* p = pwf_stream_create_playback(on_fill, NULL);
     PWF_ASSERT(p != NULL);
     PWF_ASSERT_EQ(pwf_stream_set_role(p, "Music"), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_set_audio_config(p, &cfg), PWF_OK);

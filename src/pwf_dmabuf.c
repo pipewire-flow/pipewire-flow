@@ -9,7 +9,7 @@ bool pwf_dmabuf_buffer_present(struct spa_buffer* b)
     return b->datas[0].type == SPA_DATA_DmaBuf;
 }
 
-size_t pwf_dmabuf_extract_planes(struct spa_buffer* b, pwf_dmabuf_plane* planes, size_t planes_len)
+size_t pwf_dmabuf_extract_planes(struct spa_buffer* b, struct pwf_dmabuf_plane* planes, size_t planes_len)
 {
     if (!b)
         return 0;

@@ -8,7 +8,8 @@
 static int g_cycles = 0;
 static size_t g_last_n_buffers = 0;
 
-static void process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers, void* user_data)
+static void process_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
+                       void* user_data)
 {
     (void)filter;
     (void)buffers;
@@ -19,14 +20,14 @@ static void process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, siz
 
 int main(void)
 {
-    pwf_filter_h filter = pwf_filter_create("pwf-test-signal", process_cb, NULL);
+    struct pwf_filter* filter = pwf_filter_create("pwf-test-signal", process_cb, NULL);
     PWF_ASSERT(filter != NULL);
 
     /* A signal port needs no config; both directions are valid. */
-    pwf_filter_port_h sig_in = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
+    struct pwf_filter_port* sig_in = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
     PWF_ASSERT(sig_in != NULL);
-    pwf_filter_port_h audio_in = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT,
-                                                             &(pwf_audio_config){ .sample_rate = 48000, .channels = 2 });
+    struct pwf_filter_port* audio_in = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT,
+                                                                   &(struct pwf_audio_config){ .sample_rate = 48000, .channels = 2 });
     PWF_ASSERT(audio_in != NULL);
 
     PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
@@ -46,10 +47,10 @@ int main(void)
     pwf_filter_destroy(filter);
 
     /* Adding a signal port after the filter has started is rejected. */
-    pwf_filter_h started = pwf_filter_create("pwf-test-signal-started", process_cb, NULL);
+    struct pwf_filter* started = pwf_filter_create("pwf-test-signal-started", process_cb, NULL);
     PWF_ASSERT(started != NULL);
     PWF_ASSERT(pwf_filter_add_audio_port(started, PWF_FILTER_PORT_INPUT,
-                                          &(pwf_audio_config){ .sample_rate = 48000, .channels = 2 }) != NULL);
+                                          &(struct pwf_audio_config){ .sample_rate = 48000, .channels = 2 }) != NULL);
     PWF_ASSERT_EQ(pwf_filter_start(started), PWF_OK);
     PWF_ASSERT(pwf_filter_add_signal_port(started, PWF_FILTER_PORT_OUTPUT) == NULL);
     pwf_filter_stop(started, false);

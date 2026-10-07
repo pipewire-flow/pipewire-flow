@@ -10,7 +10,7 @@
 #include "pwf_log_internal.h"
 #include "pwf_spa_format_internal.h"
 
-static void* pwf_filter_add_port_common(struct pwf_filter* filter, pwf_filter_port_direction direction,
+static void* pwf_filter_add_port_common(struct pwf_filter* filter, enum pwf_filter_port_direction direction,
                                          const struct spa_pod** params, uint32_t n_params,
                                          enum pw_filter_port_flags flags)
 {
@@ -36,14 +36,14 @@ static void* pwf_filter_add_port_common(struct pwf_filter* filter, pwf_filter_po
     return port_data;
 }
 
-pwf_data_type pwf_filter_port_get_type(pwf_filter_port_h port_handle)
+enum pwf_data_type pwf_filter_port_get_type(struct pwf_filter_port* port_handle)
 {
     struct pwf_filter_port* port = (struct pwf_filter_port*)port_handle;
     return port ? port->media_type : PWF_DATA_AUDIO;
 }
 
-pwf_filter_port_h pwf_filter_add_audio_port(pwf_filter_h handle, pwf_filter_port_direction direction,
-                                             const pwf_audio_config* config)
+struct pwf_filter_port* pwf_filter_add_audio_port(struct pwf_filter* handle, enum pwf_filter_port_direction direction,
+                                                   const struct pwf_audio_config* config)
 {
     struct pwf_filter* filter = (struct pwf_filter*)handle;
     if (!filter || !config || filter->state != PWF_FILTER_STATE_CREATED)
@@ -77,11 +77,11 @@ pwf_filter_port_h pwf_filter_add_audio_port(pwf_filter_h handle, pwf_filter_port
     if (!pwf_filter_add_port_to_list(filter, port))
         return NULL;
 
-    return (pwf_filter_port_h)port;
+    return port;
 }
 
-int pwf_filter_push_port_data(pwf_filter_h handle, pwf_filter_port_h port_handle, const void* data, size_t size,
-                               int64_t pts)
+int pwf_filter_push_port_data(struct pwf_filter* handle, struct pwf_filter_port* port_handle, const void* data,
+                              size_t size, int64_t pts)
 {
     struct pwf_filter* filter = (struct pwf_filter*)handle;
     struct pwf_filter_port* port = (struct pwf_filter_port*)port_handle;
@@ -117,7 +117,7 @@ int pwf_filter_push_port_data(pwf_filter_h handle, pwf_filter_port_h port_handle
     return PWF_OK;
 }
 
-pwf_filter_port_h pwf_filter_add_signal_port(pwf_filter_h handle, pwf_filter_port_direction direction)
+struct pwf_filter_port* pwf_filter_add_signal_port(struct pwf_filter* handle, enum pwf_filter_port_direction direction)
 {
     struct pwf_filter* filter = (struct pwf_filter*)handle;
     if (!filter || filter->state != PWF_FILTER_STATE_CREATED)
@@ -141,10 +141,10 @@ pwf_filter_port_h pwf_filter_add_signal_port(pwf_filter_h handle, pwf_filter_por
     if (!pwf_filter_add_port_to_list(filter, port))
         return NULL;
 
-    return (pwf_filter_port_h)port;
+    return port;
 }
 
-pwf_filter_port_h pwf_filter_add_event_port(pwf_filter_h handle, pwf_filter_port_direction direction)
+struct pwf_filter_port* pwf_filter_add_event_port(struct pwf_filter* handle, enum pwf_filter_port_direction direction)
 {
     struct pwf_filter* filter = (struct pwf_filter*)handle;
     if (!filter || filter->state != PWF_FILTER_STATE_CREATED)
@@ -168,11 +168,13 @@ pwf_filter_port_h pwf_filter_add_event_port(pwf_filter_h handle, pwf_filter_port
     if (!pwf_filter_add_port_to_list(filter, port))
         return NULL;
 
-    return (pwf_filter_port_h)port;
+    return port;
 }
 
-pwf_filter_port_h pwf_filter_add_video_port_ex(pwf_filter_h handle, pwf_filter_port_direction direction,
-                                                const pwf_video_config* config, const pwf_filter_port_opts* opts)
+struct pwf_filter_port* pwf_filter_add_video_port_ex(struct pwf_filter* handle,
+                                                     enum pwf_filter_port_direction direction,
+                                                     const struct pwf_video_config* config,
+                                                     const struct pwf_filter_port_opts* opts)
 {
     struct pwf_filter* filter = (struct pwf_filter*)handle;
     if (!filter || !config || !config->pixel_format || filter->state != PWF_FILTER_STATE_CREATED)
@@ -233,16 +235,16 @@ pwf_filter_port_h pwf_filter_add_video_port_ex(pwf_filter_h handle, pwf_filter_p
     if (!pwf_filter_add_port_to_list(filter, port))
         return NULL;
 
-    return (pwf_filter_port_h)port;
+    return port;
 }
 
-pwf_filter_port_h pwf_filter_add_video_port(pwf_filter_h handle, pwf_filter_port_direction direction,
-                                             const pwf_video_config* config)
+struct pwf_filter_port* pwf_filter_add_video_port(struct pwf_filter* handle, enum pwf_filter_port_direction direction,
+                                                   const struct pwf_video_config* config)
 {
     return pwf_filter_add_video_port_ex(handle, direction, config, NULL);
 }
 
-int pwf_filter_port_set_hold(pwf_filter_port_h port_handle, bool enable)
+int pwf_filter_port_set_hold(struct pwf_filter_port* port_handle, bool enable)
 {
     struct pwf_filter_port* port = (struct pwf_filter_port*)port_handle;
     if (!port || port->direction != PWF_FILTER_PORT_INPUT)

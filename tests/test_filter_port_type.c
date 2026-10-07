@@ -3,7 +3,7 @@
 #include "pwf/pwf_filter.h"
 #include "pwf_test.h"
 
-static void noop_process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers,
+static void noop_process_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
                              void* user_data)
 {
     (void)filter;
@@ -14,15 +14,15 @@ static void noop_process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers
 
 int main(void)
 {
-    pwf_filter_h filter = pwf_filter_create("pwf-test-port-type", noop_process_cb, NULL);
+    struct pwf_filter* filter = pwf_filter_create("pwf-test-port-type", noop_process_cb, NULL);
     PWF_ASSERT(filter != NULL);
 
-    pwf_filter_port_h audio = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT,
-                                                          &(pwf_audio_config){ .sample_rate = 48000, .channels = 2 });
-    pwf_filter_port_h video = pwf_filter_add_video_port(
-        filter, PWF_FILTER_PORT_INPUT, &(pwf_video_config){ .width = 640, .height = 480, .pixel_format = "RGB", .fps = 30 });
-    pwf_filter_port_h signal = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
-    pwf_filter_port_h event = pwf_filter_add_event_port(filter, PWF_FILTER_PORT_INPUT);
+    struct pwf_filter_port* audio = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT,
+                                                              &(struct pwf_audio_config){ .sample_rate = 48000, .channels = 2 });
+    struct pwf_filter_port* video = pwf_filter_add_video_port(
+              filter, PWF_FILTER_PORT_INPUT, &(struct pwf_video_config){ .width = 640, .height = 480, .pixel_format = "RGB", .fps = 30 });
+    struct pwf_filter_port* signal = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
+    struct pwf_filter_port* event = pwf_filter_add_event_port(filter, PWF_FILTER_PORT_INPUT);
 
     PWF_ASSERT(audio != NULL);
     PWF_ASSERT(video != NULL);

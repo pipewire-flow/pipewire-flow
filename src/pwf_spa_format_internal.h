@@ -16,7 +16,7 @@ enum spa_audio_format pwf_spa_lookup_audio_format(const char* name);
  * using `b`. Shared by pwf_stream's and pwf_filter's audio format
  * setters so the SPA POD-building code exists only once. Does not
  * validate `config`. */
-const struct spa_pod* pwf_spa_build_audio_format(struct spa_pod_builder* b, const pwf_audio_config* config,
+const struct spa_pod* pwf_spa_build_audio_format(struct spa_pod_builder* b, const struct pwf_audio_config* config,
                                                   enum spa_audio_format fmt);
 
 /* Maps a pixel_format string (e.g. "RGB") to its enum spa_video_format,
@@ -34,7 +34,7 @@ const char* pwf_spa_pixel_format_name_or_null(enum spa_video_format format);
 /* Builds the raw-video SPA_TYPE_OBJECT_Format POD for `config`/`fmt`
  * using `b`. Shared by pwf_stream's and pwf_filter's video format
  * setters. Does not validate `config`. */
-const struct spa_pod* pwf_spa_build_video_format(struct spa_pod_builder* b, const pwf_video_config* config,
+const struct spa_pod* pwf_spa_build_video_format(struct spa_pod_builder* b, const struct pwf_video_config* config,
                                                   enum spa_video_format fmt);
 
 /* True if `name` selects MJPEG, which is not a raw pixel layout and so
@@ -46,11 +46,11 @@ bool pwf_spa_pixel_format_is_h264(const char* name);
 
 /* Builds the MJPEG SPA_TYPE_OBJECT_Format POD for `config` using `b`.
  * Shared by pwf_stream's and pwf_filter's video format setters. */
-const struct spa_pod* pwf_spa_build_video_format_mjpg(struct spa_pod_builder* b, const pwf_video_config* config);
+const struct spa_pod* pwf_spa_build_video_format_mjpg(struct spa_pod_builder* b, const struct pwf_video_config* config);
 
 /* Builds the H.264 SPA_TYPE_OBJECT_Format POD for `config` using `b`.
  * Shared by pwf_stream's and pwf_filter's video format setters. */
-const struct spa_pod* pwf_spa_build_video_format_h264(struct spa_pod_builder* b, const pwf_video_config* config);
+const struct spa_pod* pwf_spa_build_video_format_h264(struct spa_pod_builder* b, const struct pwf_video_config* config);
 
 /* Builds the SPA_TYPE_OBJECT_Format POD for a filter signal port using
  * `b`: audio/dsp media type fixed to 32-bit float, no per-instance
@@ -74,7 +74,7 @@ const struct spa_pod* pwf_spa_build_cpu_buffers(struct spa_pod_builder* b);
 
 /* Requests SPA_META_Header on negotiated buffers, so a source that can
  * attach a capture timestamp does so. Without this the pts in
- * pwf_stream_buffer/pwf_filter_port_buffer is always -1. */
+ * struct pwf_stream_buffer/struct pwf_filter_port_buffer is always -1. */
 const struct spa_pod* pwf_spa_build_meta_header(struct spa_pod_builder* b);
 
 #endif /* PWF_SPA_FORMAT_INTERNAL_H */

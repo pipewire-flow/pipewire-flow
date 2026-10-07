@@ -80,7 +80,7 @@ void pwf_filter_on_param_changed(void* data, void* port_data, uint32_t id, const
                         filter->name ? filter->name : "pwf-filter");
 
     if (filter->error_cb)
-        filter->error_cb((pwf_filter_h)filter, (pwf_filter_port_h)port, PWF_ERR_SOURCE_UNAVAILABLE,
+        filter->error_cb(filter, port, PWF_ERR_SOURCE_UNAVAILABLE,
                           filter->user_data);
 }
 
@@ -150,7 +150,7 @@ static void pwf_filter_teardown(struct pwf_filter* filter)
     pwf_pw_core_teardown(&filter->conn);
 }
 
-pwf_filter_h pwf_filter_create(const char* name, pwf_filter_process_cb callback, void* user_data)
+struct pwf_filter* pwf_filter_create(const char* name, pwf_filter_process_func_t callback, void* user_data)
 {
     if (!callback)
         return NULL;
@@ -210,10 +210,10 @@ pwf_filter_h pwf_filter_create(const char* name, pwf_filter_process_cb callback,
 
     /* Ports need a created filter, so no push can reach the lock before this. */
     pthread_mutex_init(&filter->push_lock, NULL);
-    return (pwf_filter_h)filter;
+    return filter;
 }
 
-int pwf_filter_set_error_cb(pwf_filter_h handle, pwf_filter_error_cb callback)
+int pwf_filter_set_error_callback(struct pwf_filter* handle, pwf_filter_error_func_t callback)
 {
     struct pwf_filter* filter = (struct pwf_filter*)handle;
     if (!filter)
@@ -223,7 +223,7 @@ int pwf_filter_set_error_cb(pwf_filter_h handle, pwf_filter_error_cb callback)
     return PWF_OK;
 }
 
-int pwf_filter_set_period_hint(pwf_filter_h handle, uint32_t max_period_ns)
+int pwf_filter_set_period_hint(struct pwf_filter* handle, uint32_t max_period_ns)
 {
     struct pwf_filter* filter = (struct pwf_filter*)handle;
     if (!filter)
@@ -260,7 +260,7 @@ static void pwf_filter_apply_period_hint(struct pwf_filter* filter)
     pw_filter_update_properties(filter->pw_filter, NULL, &dict);
 }
 
-int pwf_filter_start(pwf_filter_h handle)
+int pwf_filter_start(struct pwf_filter* handle)
 {
     struct pwf_filter* filter = (struct pwf_filter*)handle;
     if (!filter)
@@ -292,7 +292,7 @@ int pwf_filter_start(pwf_filter_h handle)
     return PWF_OK;
 }
 
-int pwf_filter_stop(pwf_filter_h handle, bool drain)
+int pwf_filter_stop(struct pwf_filter* handle, bool drain)
 {
     struct pwf_filter* filter = (struct pwf_filter*)handle;
     if (!filter)
@@ -345,7 +345,7 @@ int pwf_filter_stop(pwf_filter_h handle, bool drain)
     return PWF_OK;
 }
 
-void pwf_filter_destroy(pwf_filter_h handle)
+void pwf_filter_destroy(struct pwf_filter* handle)
 {
     struct pwf_filter* filter = (struct pwf_filter*)handle;
     if (!filter || pwf_filter_refuse_in_callback(filter, true, __func__))

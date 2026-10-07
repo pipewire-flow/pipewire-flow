@@ -21,11 +21,11 @@
 #include "pwf_filter_internal.h"
 #include "pwf_test.h"
 
-static pwf_filter_port_h g_port;
+static struct pwf_filter_port* g_port;
 static const float* g_seen;
 static size_t g_seen_count;
 
-static void on_process(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
+static void on_process(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     (void)filter;
     (void)user_data;
@@ -42,7 +42,7 @@ static void on_process(pwf_filter_h filter, pwf_filter_port_buffer* buffers, siz
 /* A single block arrives byte-for-byte, in the order it was written. */
 static void test_single_block_order(void)
 {
-    pwf_filter_h handle = pwf_filter_create("pwf-test-push-order", on_process, NULL);
+    struct pwf_filter* handle = pwf_filter_create("pwf-test-push-order", on_process, NULL);
     PWF_ASSERT(handle != NULL);
     g_port = pwf_filter_add_signal_port(handle, PWF_FILTER_PORT_INPUT);
     PWF_ASSERT(g_port != NULL);
@@ -64,7 +64,7 @@ static void test_single_block_order(void)
  * cycles, matching the batch-per-cycle pattern the sensor tests use. */
 static void test_consecutive_blocks_continue_in_order(void)
 {
-    pwf_filter_h handle = pwf_filter_create("pwf-test-push-order-seq", on_process, NULL);
+    struct pwf_filter* handle = pwf_filter_create("pwf-test-push-order-seq", on_process, NULL);
     PWF_ASSERT(handle != NULL);
     g_port = pwf_filter_add_signal_port(handle, PWF_FILTER_PORT_INPUT);
     PWF_ASSERT(g_port != NULL);
@@ -91,7 +91,7 @@ static void test_consecutive_blocks_continue_in_order(void)
  * old and new bytes. */
 static void test_overwrite_replaces_whole_block(void)
 {
-    pwf_filter_h handle = pwf_filter_create("pwf-test-push-order-overwrite", on_process, NULL);
+    struct pwf_filter* handle = pwf_filter_create("pwf-test-push-order-overwrite", on_process, NULL);
     PWF_ASSERT(handle != NULL);
     g_port = pwf_filter_add_signal_port(handle, PWF_FILTER_PORT_INPUT);
     PWF_ASSERT(g_port != NULL);
@@ -117,7 +117,7 @@ static void test_overwrite_replaces_whole_block(void)
  * from an even earlier, larger push. */
 static void test_grow_shrink_grow_reuses_buffer_cleanly(void)
 {
-    pwf_filter_h handle = pwf_filter_create("pwf-test-push-order-reuse", on_process, NULL);
+    struct pwf_filter* handle = pwf_filter_create("pwf-test-push-order-reuse", on_process, NULL);
     PWF_ASSERT(handle != NULL);
     g_port = pwf_filter_add_signal_port(handle, PWF_FILTER_PORT_INPUT);
     PWF_ASSERT(g_port != NULL);

@@ -22,7 +22,7 @@ static void on_signal(int sig)
 }
 
 /* Runs on the real-time thread: generate and return, nothing else. */
-static void on_fill(pwf_stream_h stream, pwf_stream_playback_buffer* buf, void* user_data)
+static void on_fill(struct pwf_stream* stream, struct pwf_stream_playback_buffer* buf, void* user_data)
 {
     (void)stream;
     static double phase;
@@ -45,7 +45,7 @@ static void on_fill(pwf_stream_h stream, pwf_stream_playback_buffer* buf, void* 
     *reported = (double)buf->pts;
 }
 
-static void on_error(pwf_stream_h stream, int error_code, void* user_data)
+static void on_error(struct pwf_stream* stream, int error_code, void* user_data)
 {
     (void)stream;
     (void)user_data;
@@ -60,13 +60,13 @@ int main(int argc, char** argv)
     /* Shared with the callback only to show the presentation timestamp. */
     double last_pts = -1.0;
 
-    pwf_stream_h stream = pwf_stream_create_playback(on_fill, &last_pts);
+    struct pwf_stream* stream = pwf_stream_create_playback(on_fill, &last_pts);
     if (!stream) {
         fprintf(stderr, "failed to create playback stream (is PipeWire running?)\n");
         return 1;
     }
 
-    pwf_stream_set_error_cb(stream, on_error);
+    pwf_stream_set_error_callback(stream, on_error);
 
     if (argc > 1 && pwf_stream_set_target(stream, argv[1]) != PWF_OK) {
         fprintf(stderr, "failed to select output device '%s'\n", argv[1]);
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    pwf_audio_config cfg = { .sample_rate = SAMPLE_RATE, .channels = CHANNELS, .format = "S16" };
+    struct pwf_audio_config cfg = { .sample_rate = SAMPLE_RATE, .channels = CHANNELS, .format = "S16" };
     if (pwf_stream_set_audio_config(stream, &cfg) != PWF_OK) {
         fprintf(stderr, "failed to set audio format\n");
         pwf_stream_destroy(stream);

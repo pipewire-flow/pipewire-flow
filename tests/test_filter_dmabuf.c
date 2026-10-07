@@ -9,7 +9,7 @@
 #include "pwf_spa_format_internal.h" /* whitebox: verify the Buffers POD */
 #include "pwf_test.h"
 
-static void noop_process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers,
+static void noop_process_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
                              void* user_data)
 {
     (void)filter;
@@ -22,7 +22,7 @@ static void noop_process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers
  * plane's fd/offset/stride/size, skips non-DMABUF blocks, falls back to
  * maxsize when a block has no chunk, and clamps writes to max_planes while
  * still returning the true plane count. */
-static void test_plane_extraction(pwf_filter_port_h dmabuf_port)
+static void test_plane_extraction(struct pwf_filter_port* dmabuf_port)
 {
     struct pwf_filter_port* port = (struct pwf_filter_port*)dmabuf_port;
 
@@ -35,8 +35,8 @@ static void test_plane_extraction(pwf_filter_port_h dmabuf_port)
     struct spa_buffer sb = { .n_datas = 3, .datas = datas };
     port->current_dmabuf_buf = &sb;
 
-    pwf_dmabuf_plane planes[4];
-    pwf_filter_port_buffer buf = { .port = dmabuf_port };
+    struct pwf_dmabuf_plane planes[4];
+    struct pwf_filter_port_buffer buf = { .port = dmabuf_port };
     PWF_ASSERT_EQ(pwf_filter_port_get_dmabuf_planes(&buf, planes, 4), (size_t)2); /* MemPtr skipped */
     PWF_ASSERT_EQ(planes[0].fd, 42);
     PWF_ASSERT_EQ(planes[0].offset, 16u);
@@ -47,7 +47,7 @@ static void test_plane_extraction(pwf_filter_port_h dmabuf_port)
     PWF_ASSERT_EQ(planes[1].size, 50u);    /* no chunk -> maxsize fallback */
 
     /* max_planes bounds how many are written, not the returned count. */
-    pwf_dmabuf_plane one;
+    struct pwf_dmabuf_plane one;
     PWF_ASSERT_EQ(pwf_filter_port_get_dmabuf_planes(&buf, &one, 1), (size_t)2);
     PWF_ASSERT_EQ(one.fd, 42);
 
@@ -76,14 +76,14 @@ int main(void)
 {
     test_dmabuf_buffers_pod();
 
-    pwf_filter_h filter = pwf_filter_create("pwf-test-dmabuf", noop_process_cb, NULL);
+    struct pwf_filter* filter = pwf_filter_create("pwf-test-dmabuf", noop_process_cb, NULL);
     PWF_ASSERT(filter != NULL);
 
-    pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "RGB", .fps = 30 };
-    pwf_filter_port_opts dmabuf_opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "RGB", .fps = 30 };
+    struct pwf_filter_port_opts dmabuf_opts = { .memory = PWF_PORT_MEMORY_DMABUF };
 
     /* DMABUF is accepted on a video INPUT port. */
-    pwf_filter_port_h dmabuf_in =
+    struct pwf_filter_port* dmabuf_in =
         pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &cfg, &dmabuf_opts);
     PWF_ASSERT(dmabuf_in != NULL);
     PWF_ASSERT_EQ(pwf_filter_port_get_type(dmabuf_in), PWF_DATA_VIDEO);
@@ -92,23 +92,23 @@ int main(void)
     PWF_ASSERT(pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_OUTPUT, &cfg, &dmabuf_opts) == NULL);
 
     /* MJPEG and H.264 frames are never handed out as DMABUF, even on an INPUT port. */
-    pwf_video_config mjpg_cfg = { .width = 640, .height = 480, .pixel_format = "MJPG", .fps = 30 };
+    struct pwf_video_config mjpg_cfg = { .width = 640, .height = 480, .pixel_format = "MJPG", .fps = 30 };
     PWF_ASSERT(pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &mjpg_cfg, &dmabuf_opts) == NULL);
 
-    pwf_video_config h264_cfg = { .width = 640, .height = 480, .pixel_format = "H264", .fps = 30 };
+    struct pwf_video_config h264_cfg = { .width = 640, .height = 480, .pixel_format = "H264", .fps = 30 };
     PWF_ASSERT(pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &h264_cfg, &dmabuf_opts) == NULL);
 
     /* opts == NULL is exactly the non-_ex call: a normal CPU video port. */
-    pwf_filter_port_h cpu_in = pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &cfg, NULL);
+    struct pwf_filter_port* cpu_in = pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &cfg, NULL);
     PWF_ASSERT(cpu_in != NULL);
 
     /* The accessor never fabricates a plane: it returns 0 for a CPU port,
      * for a DMABUF port outside a cycle (no current buffer), and for NULL. */
-    pwf_dmabuf_plane planes[4];
-    pwf_filter_port_buffer cpu_buf = { .port = cpu_in };
+    struct pwf_dmabuf_plane planes[4];
+    struct pwf_filter_port_buffer cpu_buf = { .port = cpu_in };
     PWF_ASSERT_EQ(pwf_filter_port_get_dmabuf_planes(&cpu_buf, planes, 4), 0);
 
-    pwf_filter_port_buffer dmabuf_buf = { .port = dmabuf_in };
+    struct pwf_filter_port_buffer dmabuf_buf = { .port = dmabuf_in };
     PWF_ASSERT_EQ(pwf_filter_port_get_dmabuf_planes(&dmabuf_buf, planes, 4), 0);
 
     PWF_ASSERT_EQ(pwf_filter_port_get_dmabuf_planes(NULL, planes, 4), 0);
@@ -117,7 +117,7 @@ int main(void)
     test_plane_extraction(dmabuf_in);
 
     /* Configuration setters reject bad handles and directions. */
-    pwf_filter_port_h out = pwf_filter_add_video_port(filter, PWF_FILTER_PORT_OUTPUT, &cfg);
+    struct pwf_filter_port* out = pwf_filter_add_video_port(filter, PWF_FILTER_PORT_OUTPUT, &cfg);
     PWF_ASSERT(out != NULL);
     PWF_ASSERT_EQ(pwf_filter_port_set_hold(out, true), PWF_ERR_INVALID_ARG);   /* output port */
     PWF_ASSERT_EQ(pwf_filter_port_set_hold(NULL, true), PWF_ERR_INVALID_ARG);

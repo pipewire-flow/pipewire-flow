@@ -15,7 +15,7 @@ static void on_signal(int sig)
     g_running = 0;
 }
 
-static void on_error(pwf_filter_h filter, pwf_filter_port_h port, int error_code, void* user_data)
+static void on_error(struct pwf_filter* filter, struct pwf_filter_port* port, int error_code, void* user_data)
 {
     (void)filter;
     (void)port;
@@ -26,16 +26,17 @@ static void on_error(pwf_filter_h filter, pwf_filter_port_h port, int error_code
 /* Sums the two audio inputs sample-by-sample (with clipping) into the
  * single audio output; buffers[0]/[1] are inputs, buffers[2] is output,
  * matching the port-adding order in main(). */
-static void on_process(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers, void* user_data)
+static void on_process(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
+                       void* user_data)
 {
     (void)filter;
     (void)user_data;
     if (n_buffers < 3)
         return;
 
-    pwf_filter_port_buffer* in0 = &buffers[0];
-    pwf_filter_port_buffer* in1 = &buffers[1];
-    pwf_filter_port_buffer* out = &buffers[2];
+    struct pwf_filter_port_buffer* in0 = &buffers[0];
+    struct pwf_filter_port_buffer* in1 = &buffers[1];
+    struct pwf_filter_port_buffer* out = &buffers[2];
 
     printf("filter_mix: in0=%zu bytes in1=%zu bytes\n", in0->size, in1->size);
 
@@ -71,18 +72,18 @@ int main(void)
 {
     signal(SIGINT, on_signal);
 
-    pwf_filter_h filter = pwf_filter_create("pwf-filter-mix", on_process, NULL);
+    struct pwf_filter* filter = pwf_filter_create("pwf-filter-mix", on_process, NULL);
     if (!filter) {
         fprintf(stderr, "failed to create filter (is PipeWire running?)\n");
         return 1;
     }
 
-    pwf_filter_set_error_cb(filter, on_error);
+    pwf_filter_set_error_callback(filter, on_error);
 
-    pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
-    pwf_filter_port_h in0 = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT, &cfg);
-    pwf_filter_port_h in1 = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT, &cfg);
-    pwf_filter_port_h out = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_OUTPUT, &cfg);
+    struct pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
+    struct pwf_filter_port* in0 = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT, &cfg);
+    struct pwf_filter_port* in1 = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT, &cfg);
+    struct pwf_filter_port* out = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_OUTPUT, &cfg);
     if (!in0 || !in1 || !out) {
         fprintf(stderr, "failed to add filter ports\n");
         pwf_filter_destroy(filter);

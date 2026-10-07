@@ -15,12 +15,12 @@
 /* Collects one node's EnumFormat results while the caller blocks on the
  * core round-trip that follows the request. */
 struct pwf_video_enum_ctx {
-    pwf_video_format_info* out;
+    struct pwf_video_format_info* out;
     size_t out_len;
     size_t found; /* the true count, which may run past out_len */
 };
 
-void pwf_video_insert_framerate(pwf_video_format_info* info, int fps)
+void pwf_video_insert_framerate(struct pwf_video_format_info* info, int fps)
 {
     const size_t cap = sizeof(info->fps) / sizeof(info->fps[0]);
     size_t pos = 0;
@@ -76,7 +76,7 @@ static const char* pwf_video_parse_pixel_format(const struct spa_pod* param)
 
 /* A discrete size is a bare rectangle and leaves the maxima equal; a Range
  * or Step choice carries [default, min, max, ...], so the ends are 1 and 2. */
-static bool pwf_video_parse_size(const struct spa_pod* param, pwf_video_format_info* info)
+static bool pwf_video_parse_size(const struct spa_pod* param, struct pwf_video_format_info* info)
 {
     const struct spa_pod_prop* prop = spa_pod_find_prop(param, NULL, SPA_FORMAT_VIDEO_size);
     if (!prop)
@@ -104,7 +104,7 @@ static bool pwf_video_parse_size(const struct spa_pod* param, pwf_video_format_i
 
 /* An Enum repeats the default at entry 0, so rates start at 1; a Range has
  * its ends at 1 and 2. Sub-1fps rounds to 0, which means "auto", so it goes. */
-static void pwf_video_parse_framerates(const struct spa_pod* param, pwf_video_format_info* info)
+static void pwf_video_parse_framerates(const struct spa_pod* param, struct pwf_video_format_info* info)
 {
     const struct spa_pod_prop* prop = spa_pod_find_prop(param, NULL, SPA_FORMAT_VIDEO_framerate);
     if (!prop)
@@ -166,7 +166,7 @@ static void pwf_video_enum_on_param(void* data, int seq, uint32_t id, uint32_t i
 
     /* Parse into a scratch entry first: a malformed object must not leave a
      * half-written slot behind, and counting it would overstate the total. */
-    pwf_video_format_info info;
+    struct pwf_video_format_info info;
     memset(&info, 0, sizeof(info));
     if (!pwf_video_parse_size(param, &info))
         return;
@@ -184,7 +184,7 @@ static const struct pw_node_events pwf_video_enum_node_events = {
 };
 
 int pwf_pw_enum_video_formats(struct pwf_pw_core_conn* conn, struct pwf_pw_registry* reg,
-                               uint32_t node_id, pwf_video_format_info* out, size_t out_len,
+                               uint32_t node_id, struct pwf_video_format_info* out, size_t out_len,
                                size_t* found)
 {
     if (!found)

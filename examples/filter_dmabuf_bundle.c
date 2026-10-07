@@ -17,17 +17,18 @@ static void on_signal(int sig)
 /* buffers[0] is the DMABUF video input, buffers[1] the faster signal input,
  * matching the port-adding order in main(). The camera frame is reached
  * only through the DMABUF accessor (its `data` pointer is always NULL). */
-static void on_process(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers, void* user_data)
+static void on_process(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
+                       void* user_data)
 {
     (void)filter;
     (void)user_data;
     if (n_buffers < 2)
         return;
 
-    pwf_filter_port_buffer* video = &buffers[0];
-    pwf_filter_port_buffer* sig = &buffers[1];
+    struct pwf_filter_port_buffer* video = &buffers[0];
+    struct pwf_filter_port_buffer* sig = &buffers[1];
 
-    pwf_dmabuf_plane planes[4];
+    struct pwf_dmabuf_plane planes[4];
     size_t n_planes = pwf_filter_port_get_dmabuf_planes(video, planes, 4);
 
     /* With hold enabled, `fresh` distinguishes a newly captured frame from
@@ -44,17 +45,17 @@ int main(void)
 {
     signal(SIGINT, on_signal);
 
-    pwf_filter_h filter = pwf_filter_create("pwf-filter-dmabuf-bundle", on_process, NULL);
+    struct pwf_filter* filter = pwf_filter_create("pwf-filter-dmabuf-bundle", on_process, NULL);
     if (!filter) {
         fprintf(stderr, "failed to create filter (is PipeWire running?)\n");
         return 1;
     }
 
-    pwf_video_config vcfg = { .width = 640, .height = 480, .pixel_format = "RGB", .fps = 30 };
-    pwf_filter_port_opts dmabuf = { .memory = PWF_PORT_MEMORY_DMABUF };
-    pwf_filter_port_h video_in = pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &vcfg, &dmabuf);
+    struct pwf_video_config vcfg = { .width = 640, .height = 480, .pixel_format = "RGB", .fps = 30 };
+    struct pwf_filter_port_opts dmabuf = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_filter_port* video_in = pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &vcfg, &dmabuf);
 
-    pwf_filter_port_h sig_in = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
+    struct pwf_filter_port* sig_in = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
     if (!video_in || !sig_in) {
         fprintf(stderr, "failed to add filter ports\n");
         pwf_filter_destroy(filter);

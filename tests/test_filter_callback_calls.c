@@ -13,9 +13,9 @@
 enum { CALL_START, CALL_STOP, CALL_LINK, CALL_UNLINK, CALL_FORMATS, N_CALLS };
 
 struct sink {
-    pwf_filter_h filter;
-    pwf_filter_port_h in;
-    pwf_filter_port_h spare;
+    struct pwf_filter* filter;
+    struct pwf_filter_port* in;
+    struct pwf_filter_port* spare;
     bool calls_in_process;
     bool calls_in_error;
     atomic_int cycles;
@@ -43,7 +43,7 @@ static bool wait_for(const atomic_int* counter, int target)
     return false;
 }
 
-static void source_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
+static void source_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     (void)filter;
     (void)user_data;
@@ -51,9 +51,9 @@ static void source_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size
         buffers[i].size = 0;
 }
 
-static pwf_filter_h make_source(const char* name)
+static struct pwf_filter* make_source(const char* name)
 {
-    pwf_filter_h filter = pwf_filter_create(name, source_cb, NULL);
+    struct pwf_filter* filter = pwf_filter_create(name, source_cb, NULL);
     PWF_ASSERT(filter != NULL);
     PWF_ASSERT(pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_OUTPUT) != NULL);
     PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
@@ -74,7 +74,7 @@ static void call_everything(struct sink* s)
     pwf_filter_destroy(s->filter); /* The call is refused, so the filter stays usable. */
 }
 
-static void sink_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
+static void sink_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     (void)filter;
     (void)buffers;
@@ -86,7 +86,7 @@ static void sink_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t
     }
 }
 
-static void sink_error_cb(pwf_filter_h filter, pwf_filter_port_h port, int error_code, void* user_data)
+static void sink_error_cb(struct pwf_filter* filter, struct pwf_filter_port* port, int error_code, void* user_data)
 {
     (void)filter;
     (void)port;
@@ -111,12 +111,12 @@ static void make_sink(struct sink* s, const char* name)
     s->in = pwf_filter_add_signal_port(s->filter, PWF_FILTER_PORT_INPUT);
     s->spare = pwf_filter_add_signal_port(s->filter, PWF_FILTER_PORT_INPUT);
     PWF_ASSERT(s->in != NULL && s->spare != NULL);
-    PWF_ASSERT_EQ(pwf_filter_set_error_cb(s->filter, sink_error_cb), PWF_OK);
+    PWF_ASSERT_EQ(pwf_filter_set_error_callback(s->filter, sink_error_cb), PWF_OK);
     PWF_ASSERT_EQ(pwf_filter_start(s->filter), PWF_OK);
 }
 
 /* Links by the name given to create(), retrying while the new node reaches the registry. */
-static int link_by_name(pwf_filter_port_h port, const char* name)
+static int link_by_name(struct pwf_filter_port* port, const char* name)
 {
     int res = PWF_ERR_INVALID_ARG;
     for (int i = 0; i < 20 && res != PWF_OK; i++) {
@@ -130,7 +130,7 @@ static int link_by_name(pwf_filter_port_h port, const char* name)
 /* A source that disappears is reported once, though both its link and its format go. */
 static void test_lost_source_reported_once(void)
 {
-    pwf_filter_h src = make_source("pwf-test-cbc-lost");
+    struct pwf_filter* src = make_source("pwf-test-cbc-lost");
     struct sink s = { 0 };
     make_sink(&s, "pwf-test-cbc-sink-lost");
     PWF_ASSERT_EQ(link_by_name(s.in, "pwf-test-cbc-lost"), PWF_OK);
@@ -146,7 +146,7 @@ static void test_lost_source_reported_once(void)
 /* The application's own unlink, stop or destroy loses no source, so none reports one. */
 static void test_own_teardown_reports_nothing(void)
 {
-    pwf_filter_h src = make_source("pwf-test-cbc-src");
+    struct pwf_filter* src = make_source("pwf-test-cbc-src");
 
     for (int how = 0; how < 3; how++) {
         struct sink s = { 0 };
@@ -171,7 +171,7 @@ static void test_own_teardown_reports_nothing(void)
 /* The process callback runs on the data thread, where every call taking the loop lock is refused. */
 static void test_calls_refused_in_process_callback(void)
 {
-    pwf_filter_h src = make_source("pwf-test-cbc-src");
+    struct pwf_filter* src = make_source("pwf-test-cbc-src");
     struct sink s = { .calls_in_process = true };
     make_sink(&s, "pwf-test-cbc-sink-process");
     PWF_ASSERT_EQ(link_by_name(s.in, "pwf-test-cbc-src"), PWF_OK);
@@ -190,8 +190,8 @@ static void test_calls_refused_in_process_callback(void)
 /* The error callback runs on the loop thread, where calls that would wait on it are refused. */
 static void test_calls_refused_in_error_callback(void)
 {
-    pwf_filter_h src = make_source("pwf-test-cbc-gone");
-    pwf_filter_h other = make_source("pwf-test-cbc-src");
+    struct pwf_filter* src = make_source("pwf-test-cbc-gone");
+    struct pwf_filter* other = make_source("pwf-test-cbc-src");
     struct sink s = { .calls_in_error = true };
     make_sink(&s, "pwf-test-cbc-sink-error");
     PWF_ASSERT_EQ(link_by_name(s.in, "pwf-test-cbc-gone"), PWF_OK);

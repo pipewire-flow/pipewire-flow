@@ -14,14 +14,14 @@ static void on_signal(int sig)
     g_running = 0;
 }
 
-static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)user_data;
     printf("video: received frame of %zu bytes (pts=%lld ns)\n", buf->size, (long long)buf->pts);
 }
 
-static void on_error(pwf_stream_h stream, int error_code, void* user_data)
+static void on_error(struct pwf_stream* stream, int error_code, void* user_data)
 {
     (void)stream;
     (void)user_data;
@@ -33,15 +33,15 @@ int main(void)
 {
     signal(SIGINT, on_signal);
 
-    pwf_stream_h stream = pwf_stream_create(PWF_DATA_VIDEO, on_data, NULL);
+    struct pwf_stream* stream = pwf_stream_create(PWF_DATA_VIDEO, on_data, NULL);
     if (!stream) {
         fprintf(stderr, "failed to create video stream (is PipeWire running?)\n");
         return 1;
     }
 
-    pwf_stream_set_error_cb(stream, on_error);
+    pwf_stream_set_error_callback(stream, on_error);
 
-    pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
+    struct pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
     if (pwf_stream_set_video_config(stream, &cfg) != PWF_OK) {
         fprintf(stderr, "failed to set video format\n");
         pwf_stream_destroy(stream);

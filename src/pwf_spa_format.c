@@ -31,7 +31,7 @@ enum spa_audio_format pwf_spa_lookup_audio_format(const char* name)
     return SPA_AUDIO_FORMAT_UNKNOWN;
 }
 
-const struct spa_pod* pwf_spa_build_audio_format(struct spa_pod_builder* b, const pwf_audio_config* config,
+const struct spa_pod* pwf_spa_build_audio_format(struct spa_pod_builder* b, const struct pwf_audio_config* config,
                                                   enum spa_audio_format fmt)
 {
     struct spa_audio_info_raw info = {
@@ -80,7 +80,7 @@ const char* pwf_spa_pixel_format_name(enum spa_video_format format)
     return name ? name : "unknown";
 }
 
-const struct spa_pod* pwf_spa_build_video_format(struct spa_pod_builder* b, const pwf_video_config* config,
+const struct spa_pod* pwf_spa_build_video_format(struct spa_pod_builder* b, const struct pwf_video_config* config,
                                                   enum spa_video_format fmt)
 {
     struct spa_rectangle size = SPA_RECTANGLE((uint32_t)config->width, (uint32_t)config->height);
@@ -117,7 +117,7 @@ bool pwf_spa_pixel_format_is_h264(const char* name)
     return strcmp(name, "H264") == 0;
 }
 
-const struct spa_pod* pwf_spa_build_video_format_mjpg(struct spa_pod_builder* b, const pwf_video_config* config)
+const struct spa_pod* pwf_spa_build_video_format_mjpg(struct spa_pod_builder* b, const struct pwf_video_config* config)
 {
     /* MJPEG has no raw pixel-layout enum, so it gets its own POD shape
      * instead of going through pwf_spa_build_video_format(). */
@@ -129,7 +129,7 @@ const struct spa_pod* pwf_spa_build_video_format_mjpg(struct spa_pod_builder* b,
     return spa_format_video_mjpg_build(b, SPA_PARAM_EnumFormat, &info);
 }
 
-const struct spa_pod* pwf_spa_build_video_format_h264(struct spa_pod_builder* b, const pwf_video_config* config)
+const struct spa_pod* pwf_spa_build_video_format_h264(struct spa_pod_builder* b, const struct pwf_video_config* config)
 {
     struct spa_video_info_h264 info = {
         .size = SPA_RECTANGLE((uint32_t)config->width, (uint32_t)config->height),

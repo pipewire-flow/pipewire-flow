@@ -24,44 +24,44 @@ extern "C" {
  * this is a data type. SIGNAL and EVENT are filter-port-only:
  * pwf_stream_create() only accepts AUDIO/VIDEO and rejects the other two.
  */
-typedef enum {
+enum pwf_data_type {
     PWF_DATA_AUDIO  = 0, /**< Raw audio samples. */
     PWF_DATA_VIDEO  = 1, /**< Raw video frames. */
     PWF_DATA_SIGNAL = 2, /**< One 32-bit float per frame, e.g. a sensor reading; filter ports only, see pwf_filter.h. */
     PWF_DATA_EVENT  = 3  /**< Discrete timestamped items such as MIDI or a property; filter ports only, see pwf_filter.h. */
-} pwf_data_type;
+};
 
 /** @brief Library error codes. Negative values only; 0 is success. */
-typedef enum {
+enum pwf_error {
     PWF_OK                     = 0,  /**< Success. */
     PWF_ERR_INVALID_ARG        = -1, /**< A NULL/out-of-range argument, or a call invalid for the object's current state or routing mode. */
     PWF_ERR_CONNECT_FAILED     = -2, /**< Connecting to PipeWire, or asking it to create a stream, link or query, failed. */
     PWF_ERR_INVALID_FORMAT     = -3, /**< An unrecognized pixel/sample format string, or an out-of-range dimension/rate. */
     PWF_ERR_NOT_CONFIGURED     = -4, /**< Called before a required prior step, e.g. start() before a format was set, link() before start(), or unlink() with nothing linked. */
-    PWF_ERR_SOURCE_UNAVAILABLE = -5, /**< The connected source disappeared, or could not provide the requested memory type (see pwf_stream_error_cb). */
+    PWF_ERR_SOURCE_UNAVAILABLE = -5, /**< The connected source disappeared, or could not provide the requested memory type (see pwf_stream_error_func_t). */
     PWF_ERR_IN_CALLBACK        = -6, /**< Called from inside one of the object's own callbacks, where the call cannot run; call it again after the callback returns. */
     PWF_ERR_NOT_FOUND          = -7, /**< No node in the graph matches the target name or serial; it may have gone away or never existed. */
     PWF_ERR_TIMEOUT            = -8, /**< PipeWire did not answer, or a link did not negotiate, within the library's time limit; the same call may succeed if retried. */
     PWF_ERR_NO_MEMORY          = -9  /**< A memory allocation failed. */
-} pwf_error;
+};
 
 /**
  * @brief Audio capture configuration passed to
  *        pwf_stream_set_audio_config() and pwf_filter_add_audio_port().
  */
-typedef struct {
+struct pwf_audio_config {
     int sample_rate;    /**< Hz, e.g. 48000. */
     int channels;       /**< Channel count, e.g. 2. */
     const char* format; /**< "U8", "S16", "S24", "S24_32", "S32", or "F32"; NULL defaults to "S16". */
-} pwf_audio_config;
+};
 
 /** @brief Video capture configuration passed to pwf_stream_set_video_config(). */
-typedef struct {
+struct pwf_video_config {
     int width;                /**< Frame width in pixels. */
     int height;               /**< Frame height in pixels. */
     const char* pixel_format; /**< "RGB", "YUYV", "NV12", "NV21", "I420", "MJPG", or "H264". MJPG and H264 are compressed: each delivered frame's size varies, and DMABUF delivery is not available for them. */
     int fps;                  /**< Frames per second; 0 negotiates automatically. */
-} pwf_video_config;
+};
 
 /**
  * @brief Selects a video port/stream's buffer memory.
@@ -69,10 +69,10 @@ typedef struct {
  * AUTO is the default (graph-selected, normally CPU-mapped). DMABUF
  * negotiates file descriptors instead of a CPU buffer.
  */
-typedef enum {
+enum pwf_port_memory {
     PWF_PORT_MEMORY_AUTO   = 0, /**< Graph-selected, normally CPU-mapped. */
     PWF_PORT_MEMORY_DMABUF = 1  /**< Negotiate DMABUF file descriptors. */
-} pwf_port_memory;
+};
 
 /**
  * @brief One plane of a DMABUF-delivered frame.
@@ -80,30 +80,30 @@ typedef enum {
  * `fd` is borrowed (import-only, not owned): valid only for the callback
  * that received it, do not close it.
  */
-typedef struct {
+struct pwf_dmabuf_plane {
     int      fd;     /**< Borrowed DMABUF file descriptor; do not close. */
     uint32_t offset; /**< Byte offset to the plane within the dmabuf. */
     uint32_t stride; /**< Row stride in bytes. */
     uint32_t size;   /**< Valid bytes of this plane. */
-} pwf_dmabuf_plane;
+};
 
 /**
  * @brief One pixel format and frame size a target can deliver.
  *
- * Every field goes straight into a pwf_video_config; a pixel format this
+ * Every field goes straight into a struct pwf_video_config; a pixel format this
  * library cannot name is left out rather than reported as unusable. A
  * device taking a range of sizes reports its ends, so `width_max`/
  * `height_max` exceed `width`/`height` there and equal them otherwise.
  */
-typedef struct {
-    char   pixel_format[16]; /**< "RGB", "YUYV", "NV12", "NV21", "I420", "MJPG", or "H264", as pwf_video_config takes it. */
+struct pwf_video_format_info {
+    char   pixel_format[16]; /**< "RGB", "YUYV", "NV12", "NV21", "I420", "MJPG", or "H264", as struct pwf_video_config takes it. */
     int    width;            /**< Frame width in pixels, or the smallest one for a size range. */
     int    height;           /**< Frame height in pixels, or the smallest one for a size range. */
     int    width_max;        /**< Equal to `width` for a discrete size, the range's largest width otherwise. */
     int    height_max;       /**< Equal to `height` for a discrete size, the range's largest height otherwise. */
-    int    fps[8];           /**< Frame rates at this size, highest first; whole frames per second, as pwf_video_config takes them. */
+    int    fps[8];           /**< Frame rates at this size, highest first; whole frames per second, as struct pwf_video_config takes them. */
     size_t n_fps;            /**< Entries set in `fps`, never more than it holds; a device offering more keeps its fastest rates. */
-} pwf_video_format_info;
+};
 
 #ifdef __cplusplus
 }

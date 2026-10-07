@@ -10,14 +10,14 @@
 #include "pwf_pw_core_internal.h"
 #include "pwf_test.h"
 
-static void ignore_data_cb(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void ignore_data_cb(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)buf;
     (void)user_data;
 }
 
-static void ignore_process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers,
+static void ignore_process_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
                                void* user_data)
 {
     (void)filter;
@@ -28,7 +28,7 @@ static void ignore_process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffe
 
 static void test_framerate_order(void)
 {
-    pwf_video_format_info info = { 0 };
+    struct pwf_video_format_info info = { 0 };
 
     /* Rates arrive in whatever order the device lists them and come back
      * highest first, which is what makes fps[0] the one to reach for. */
@@ -46,7 +46,7 @@ static void test_framerate_order(void)
     PWF_ASSERT_EQ(info.n_fps, (size_t)3);
 
     /* Filling the array exactly keeps every rate. */
-    pwf_video_format_info full = { 0 };
+    struct pwf_video_format_info full = { 0 };
     const size_t cap = sizeof(full.fps) / sizeof(full.fps[0]);
     for (size_t i = 1; i <= cap; i++)
         pwf_video_insert_framerate(&full, (int)i);
@@ -71,7 +71,7 @@ static void test_framerate_order(void)
 
 static void test_stream_rejections(void)
 {
-    pwf_video_format_info fmts[4];
+    struct pwf_video_format_info fmts[4];
     size_t n = 99;
 
     /* No handle, no connection to ask over. */
@@ -81,13 +81,13 @@ static void test_stream_rejections(void)
 
     /* An audio stream is refused, not answered with an empty list, which
      * would instead read as "this camera offers nothing". */
-    pwf_stream_h audio = pwf_stream_create(PWF_DATA_AUDIO, ignore_data_cb, NULL);
+    struct pwf_stream* audio = pwf_stream_create(PWF_DATA_AUDIO, ignore_data_cb, NULL);
     PWF_ASSERT(audio != NULL);
     PWF_ASSERT_EQ(pwf_stream_get_target_video_formats(audio, "some-node", fmts, 4, &n),
                   PWF_ERR_INVALID_ARG);
     pwf_stream_destroy(audio);
 
-    pwf_stream_h video = pwf_stream_create(PWF_DATA_VIDEO, ignore_data_cb, NULL);
+    struct pwf_stream* video = pwf_stream_create(PWF_DATA_VIDEO, ignore_data_cb, NULL);
     PWF_ASSERT(video != NULL);
 
     /* There is nowhere to report a count to. */
@@ -114,14 +114,14 @@ static void test_stream_rejections(void)
 
 static void test_filter_rejections(void)
 {
-    pwf_video_format_info fmts[4];
+    struct pwf_video_format_info fmts[4];
     size_t n = 99;
 
     PWF_ASSERT_EQ(pwf_filter_get_target_video_formats(NULL, "some-node", fmts, 4, &n),
                   PWF_ERR_INVALID_ARG);
     PWF_ASSERT_EQ(n, (size_t)0);
 
-    pwf_filter_h filter = pwf_filter_create("pwf-test-video-enum", ignore_process_cb, NULL);
+    struct pwf_filter* filter = pwf_filter_create("pwf-test-video-enum", ignore_process_cb, NULL);
     PWF_ASSERT(filter != NULL);
 
     PWF_ASSERT_EQ(pwf_filter_get_target_video_formats(filter, "some-node", fmts, 4, NULL),

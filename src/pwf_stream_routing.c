@@ -46,7 +46,7 @@ static void pwf_stream_on_node_removed(void* data, uint32_t id)
     pwf_log_warning("stream: linked device disappeared");
     pwf_stream_release_links(stream);
     if (stream->error_cb)
-        stream->error_cb((pwf_stream_h)stream, PWF_ERR_SOURCE_UNAVAILABLE, stream->user_data);
+        stream->error_cb(stream, PWF_ERR_SOURCE_UNAVAILABLE, stream->user_data);
 }
 
 /* How many ports this stream should have once the server has published them. */
@@ -123,7 +123,7 @@ static const char* pwf_stream_target_media_class(const struct pwf_stream* stream
     return stream->type == PWF_DATA_VIDEO ? "Video/Source" : "Audio/Source";
 }
 
-int pwf_stream_get_target_list(pwf_stream_h handle, pwf_target_info* out, size_t out_len,
+int pwf_stream_get_target_list(struct pwf_stream* handle, struct pwf_target_info* out, size_t out_len,
                                 size_t* found)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
@@ -161,8 +161,8 @@ int pwf_stream_get_target_list(pwf_stream_h handle, pwf_target_info* out, size_t
     return PWF_OK;
 }
 
-int pwf_stream_get_target_video_formats(pwf_stream_h handle, const char* target,
-                                         pwf_video_format_info* out, size_t out_len,
+int pwf_stream_get_target_video_formats(struct pwf_stream* handle, const char* target,
+                                         struct pwf_video_format_info* out, size_t out_len,
                                          size_t* found)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
@@ -285,7 +285,7 @@ static int pwf_stream_link_one(struct pwf_stream* stream, struct pwf_stream_link
     return res;
 }
 
-int pwf_stream_link(pwf_stream_h handle, const char* target)
+int pwf_stream_link(struct pwf_stream* handle, const char* target)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     if (!stream || !target || !*target)
@@ -371,7 +371,7 @@ int pwf_stream_link(pwf_stream_h handle, const char* target)
     return PWF_OK;
 }
 
-int pwf_stream_unlink(pwf_stream_h handle)
+int pwf_stream_unlink(struct pwf_stream* handle)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     if (!stream)

@@ -29,16 +29,16 @@ static bool wait_for(const atomic_uint* counter, unsigned target)
 static atomic_uint g_events_seen;
 static atomic_uint g_events_misordered;
 
-static void event_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
+static void event_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     (void)filter;
     (void)n;
     (void)user_data;
 
-    pwf_filter_port_h in = buffers[0].port;
+    struct pwf_filter_port* in = buffers[0].port;
     size_t count = pwf_filter_port_get_event_count(in);
     for (size_t i = 0; i < count; i++) {
-        pwf_event ev;
+        struct pwf_event ev;
         uint32_t value = 0;
         if (pwf_filter_port_get_event(in, i, &ev) == PWF_OK && ev.size == sizeof(value))
             memcpy(&value, ev.data, sizeof(value));
@@ -52,14 +52,14 @@ static void event_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_
 
 static void test_no_event_is_lost(void)
 {
-    pwf_filter_h filter = pwf_filter_create("pwf-test-push-race-events", event_cb, NULL);
+    struct pwf_filter* filter = pwf_filter_create("pwf-test-push-race-events", event_cb, NULL);
     PWF_ASSERT(filter != NULL);
-    pwf_filter_port_h in = pwf_filter_add_event_port(filter, PWF_FILTER_PORT_INPUT);
+    struct pwf_filter_port* in = pwf_filter_add_event_port(filter, PWF_FILTER_PORT_INPUT);
     PWF_ASSERT(in != NULL);
     PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
 
     for (uint32_t i = 0; i < PUSHES; i++) {
-        pwf_event ev = { .offset = 0, .kind = PWF_EVENT_MIDI, .key = NULL, .data = &i, .size = sizeof(i) };
+        struct pwf_event ev = { .offset = 0, .kind = PWF_EVENT_MIDI, .key = NULL, .data = &i, .size = sizeof(i) };
         PWF_ASSERT_EQ(pwf_filter_port_push_event(in, &ev), PWF_OK);
         usleep(300 + (i % 7) * 300); /* The spacing lands pushes across the whole cycle. */
     }
@@ -86,13 +86,13 @@ static size_t size_for(uint8_t value)
     return 16 + (size_t)value * 8;
 }
 
-static void data_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
+static void data_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     (void)filter;
     (void)n;
     (void)user_data;
 
-    const pwf_filter_port_buffer* b = &buffers[0];
+    const struct pwf_filter_port_buffer* b = &buffers[0];
     if (!b->fresh || !b->data || b->size == 0) {
         usleep(SLOW_CALLBACK_US);
         return;
@@ -112,9 +112,9 @@ static void data_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t
 
 static void test_delivered_data_is_stable(void)
 {
-    pwf_filter_h filter = pwf_filter_create("pwf-test-push-race-data", data_cb, NULL);
+    struct pwf_filter* filter = pwf_filter_create("pwf-test-push-race-data", data_cb, NULL);
     PWF_ASSERT(filter != NULL);
-    pwf_filter_port_h in = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
+    struct pwf_filter_port* in = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
     PWF_ASSERT(in != NULL);
     PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
 

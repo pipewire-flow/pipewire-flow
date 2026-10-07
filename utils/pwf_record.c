@@ -10,18 +10,18 @@
 
 #include "pwf/pwf_stream.h"
 
-typedef enum {
+enum record_type {
     RECORD_TYPE_AUDIO,
     RECORD_TYPE_VIDEO
-} record_type;
+};
 
-typedef enum {
+enum record_format {
     FORMAT_UNSET = -1,
     FORMAT_WAV,
     FORMAT_PCM,
     FORMAT_RAW,
     FORMAT_Y4M
-} record_format;
+};
 
 static volatile sig_atomic_t g_running = 1;
 
@@ -33,11 +33,11 @@ static void on_signal(int sig)
 
 struct record_ctx {
     FILE* file;
-    record_format format;
+    enum record_format format;
     uint32_t bytes_written;
 };
 
-static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     struct record_ctx* ctx = user_data;
@@ -47,7 +47,7 @@ static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* use
         ctx->bytes_written += (uint32_t)buf->size;
 }
 
-static void on_error(pwf_stream_h stream, int error_code, void* user_data)
+static void on_error(struct pwf_stream* stream, int error_code, void* user_data)
 {
     (void)stream;
     (void)user_data;
@@ -157,8 +157,8 @@ int main(int argc, char** argv)
 {
     const char* output = NULL;
     const char* device = NULL;
-    record_type type = RECORD_TYPE_AUDIO;
-    record_format format = FORMAT_UNSET;
+    enum record_type type = RECORD_TYPE_AUDIO;
+    enum record_format format = FORMAT_UNSET;
     int duration = 0;
     int sample_rate = 48000;
     int channels = 2;
@@ -315,8 +315,8 @@ int main(int argc, char** argv)
         alarm((unsigned)duration);
     }
 
-    pwf_data_type stream_type = (type == RECORD_TYPE_VIDEO) ? PWF_DATA_VIDEO : PWF_DATA_AUDIO;
-    pwf_stream_h stream = pwf_stream_create(stream_type, on_data, &ctx);
+    enum pwf_data_type stream_type = (type == RECORD_TYPE_VIDEO) ? PWF_DATA_VIDEO : PWF_DATA_AUDIO;
+    struct pwf_stream* stream = pwf_stream_create(stream_type, on_data, &ctx);
     if (!stream) {
         fprintf(stderr, "pwf_record: failed to create %s stream (is PipeWire running?)\n",
             type == RECORD_TYPE_VIDEO ? "video" : "audio");
@@ -324,7 +324,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    pwf_stream_set_error_cb(stream, on_error);
+    pwf_stream_set_error_callback(stream, on_error);
 
     if (device && pwf_stream_set_target(stream, device) != PWF_OK) {
         fprintf(stderr, "pwf_record: failed to set target device\n");
@@ -335,10 +335,10 @@ int main(int argc, char** argv)
 
     int config_res;
     if (type == RECORD_TYPE_VIDEO) {
-        pwf_video_config cfg = { .width = width, .height = height, .pixel_format = pixel_format, .fps = fps };
+        struct pwf_video_config cfg = { .width = width, .height = height, .pixel_format = pixel_format, .fps = fps };
         config_res = pwf_stream_set_video_config(stream, &cfg);
     } else {
-        pwf_audio_config cfg = { .sample_rate = sample_rate, .channels = channels, .format = audio_format };
+        struct pwf_audio_config cfg = { .sample_rate = sample_rate, .channels = channels, .format = audio_format };
         config_res = pwf_stream_set_audio_config(stream, &cfg);
     }
     if (config_res != PWF_OK) {

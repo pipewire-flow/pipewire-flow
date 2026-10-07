@@ -4,7 +4,7 @@
 #include "pwf_filter_internal.h" /* whitebox: the ns->ratio conversion */
 #include "pwf_test.h"
 
-static void noop_process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers,
+static void noop_process_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
                              void* user_data)
 {
     (void)filter;
@@ -27,10 +27,10 @@ int main(void)
 {
     test_period_conversion();
 
-    pwf_filter_h filter = pwf_filter_create("pwf-test-period-hint", noop_process_cb, NULL);
+    struct pwf_filter* filter = pwf_filter_create("pwf-test-period-hint", noop_process_cb, NULL);
     PWF_ASSERT(filter != NULL);
 
-    pwf_filter_port_h in = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
+    struct pwf_filter_port* in = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
     PWF_ASSERT(in != NULL);
 
     /* Accepted before start; 0 clears it. */

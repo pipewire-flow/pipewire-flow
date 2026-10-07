@@ -81,7 +81,7 @@ int pwf_pw_registry_bind(struct pwf_pw_registry* reg, struct pwf_pw_core_conn* c
  * arrived. Caller must hold the thread loop. 0 on success, negative on error. */
 int pwf_pw_core_sync_locked(struct pwf_pw_core_conn* conn);
 
-/* Maps a failed round-trip or registry bind to a pwf_error: TIMEOUT when the
+/* Maps a failed round-trip or registry bind to an enum pwf_error: TIMEOUT when the
  * server never answered in time, CONNECT_FAILED for any other failure. */
 int pwf_pw_error_from_sync(int res);
 
@@ -115,12 +115,12 @@ size_t pwf_pw_registry_list_ports(const struct pwf_pw_registry* reg, uint32_t no
 
 /* Inserts `fps` descending, dropping repeats and, once `fps` is full, any rate
  * slower than all of them. Exposed so a test can cover it without a device. */
-void pwf_video_insert_framerate(pwf_video_format_info* info, int fps);
+void pwf_video_insert_framerate(struct pwf_video_format_info* info, int fps);
 
 /* Collects the video formats of node `node_id` into `out`, count-then-fill.
  * `reg` must be bound; blocks on a round-trip, so hold no thread loop. */
 int pwf_pw_enum_video_formats(struct pwf_pw_core_conn* conn, struct pwf_pw_registry* reg,
-                               uint32_t node_id, pwf_video_format_info* out, size_t out_len,
+                               uint32_t node_id, struct pwf_video_format_info* out, size_t out_len,
                                size_t* found);
 
 /* Increments the process-wide pw_init() refcount, calling pw_init() on
@@ -133,7 +133,7 @@ void pwf_pw_global_deinit(void);
 
 /* Starts a thread-loop, creates a context on it, and connects a core,
  * waiting (bounded) for PipeWire to confirm the connection before
- * returning. Returns 0 on success, a negative pwf_error-style
+ * returning. Returns 0 on success, a negative enum pwf_error-style
  * code on failure (conn's fields are left safe to pass to
  * pwf_pw_core_teardown() either way). */
 int pwf_pw_core_connect(struct pwf_pw_core_conn* conn, const char* loop_name);

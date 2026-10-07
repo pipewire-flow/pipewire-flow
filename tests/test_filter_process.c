@@ -9,7 +9,8 @@ static int g_cycles = 0;
 static size_t g_last_n_buffers = 0;
 static int64_t g_last_output_pts = 0;
 
-static void process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers, void* user_data)
+static void process_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
+                       void* user_data)
 {
     (void)filter;
     (void)user_data;
@@ -26,7 +27,8 @@ static int g_mixed_cycles = 0;
 static size_t g_mixed_n_buffers = 0;
 static int64_t g_mixed_event_pts = 0;
 
-static void mixed_process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers, void* user_data)
+static void mixed_process_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
+                             void* user_data)
 {
     (void)filter;
     (void)user_data;
@@ -41,7 +43,7 @@ static void mixed_process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffer
 static int g_dmabuf_mixed_cycles = 0;
 static size_t g_dmabuf_mixed_n_buffers = 0;
 
-static void dmabuf_mixed_process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers,
+static void dmabuf_mixed_process_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
                                     void* user_data)
 {
     (void)filter;
@@ -54,7 +56,7 @@ static void dmabuf_mixed_process_cb(pwf_filter_h filter, pwf_filter_port_buffer*
 static int g_many_cycles = 0;
 static size_t g_many_n_buffers = 0;
 
-static void many_ports_process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers,
+static void many_ports_process_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
                                    void* user_data)
 {
     (void)filter;
@@ -66,10 +68,10 @@ static void many_ports_process_cb(pwf_filter_h filter, pwf_filter_port_buffer* b
 
 int main(void)
 {
-    pwf_filter_h filter = pwf_filter_create("pwf-test-process", process_cb, NULL);
+    struct pwf_filter* filter = pwf_filter_create("pwf-test-process", process_cb, NULL);
     PWF_ASSERT(filter != NULL);
 
-    pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
+    struct pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
     PWF_ASSERT(pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT, &cfg) != NULL);
     PWF_ASSERT(pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT, &cfg) != NULL);
     PWF_ASSERT(pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_OUTPUT, &cfg) != NULL);
@@ -94,11 +96,11 @@ int main(void)
     /* One port of each of the four supported kinds on a single filter
      * must still be delivered together in one callback invocation per
      * cycle (audio/video/signal/event mixing). */
-    pwf_filter_h mixed = pwf_filter_create("pwf-test-process-mixed", mixed_process_cb, NULL);
+    struct pwf_filter* mixed = pwf_filter_create("pwf-test-process-mixed", mixed_process_cb, NULL);
     PWF_ASSERT(mixed != NULL);
 
     PWF_ASSERT(pwf_filter_add_audio_port(mixed, PWF_FILTER_PORT_INPUT, &cfg) != NULL);
-    pwf_video_config vcfg = { .width = 640, .height = 480, .pixel_format = "RGB", .fps = 30 };
+    struct pwf_video_config vcfg = { .width = 640, .height = 480, .pixel_format = "RGB", .fps = 30 };
     PWF_ASSERT(pwf_filter_add_video_port(mixed, PWF_FILTER_PORT_INPUT, &vcfg) != NULL);
     PWF_ASSERT(pwf_filter_add_signal_port(mixed, PWF_FILTER_PORT_INPUT) != NULL);
     PWF_ASSERT(pwf_filter_add_event_port(mixed, PWF_FILTER_PORT_INPUT) != NULL);
@@ -117,11 +119,11 @@ int main(void)
      * still be delivered together in one callback per cycle, even with no
      * DMABUF source linked — the video port simply carries no frame that
      * cycle. */
-    pwf_filter_h dmabuf_mixed = pwf_filter_create("pwf-test-process-dmabuf", dmabuf_mixed_process_cb, NULL);
+    struct pwf_filter* dmabuf_mixed = pwf_filter_create("pwf-test-process-dmabuf", dmabuf_mixed_process_cb, NULL);
     PWF_ASSERT(dmabuf_mixed != NULL);
 
     PWF_ASSERT(pwf_filter_add_audio_port(dmabuf_mixed, PWF_FILTER_PORT_INPUT, &cfg) != NULL);
-    pwf_filter_port_opts dmabuf_opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_filter_port_opts dmabuf_opts = { .memory = PWF_PORT_MEMORY_DMABUF };
     PWF_ASSERT(pwf_filter_add_video_port_ex(dmabuf_mixed, PWF_FILTER_PORT_INPUT, &vcfg, &dmabuf_opts) != NULL);
     PWF_ASSERT(pwf_filter_add_signal_port(dmabuf_mixed, PWF_FILTER_PORT_INPUT) != NULL);
 
@@ -137,7 +139,7 @@ int main(void)
     /* More ports than the internal stack-allocation threshold (8) must
      * fall back to heap allocation for the per-cycle buffer array
      * without breaking delivery. */
-    pwf_filter_h many = pwf_filter_create("pwf-test-process-many", many_ports_process_cb, NULL);
+    struct pwf_filter* many = pwf_filter_create("pwf-test-process-many", many_ports_process_cb, NULL);
     PWF_ASSERT(many != NULL);
 
     const size_t n_ports = 9;

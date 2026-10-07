@@ -132,8 +132,8 @@ static uint32_t pwf_resolve_target(struct pwf_filter* filter, const char* target
     return node_id;
 }
 
-int pwf_filter_get_target_video_formats(pwf_filter_h handle, const char* target,
-                                         pwf_video_format_info* out, size_t out_len,
+int pwf_filter_get_target_video_formats(struct pwf_filter* handle, const char* target,
+                                         struct pwf_video_format_info* out, size_t out_len,
                                          size_t* found)
 {
     struct pwf_filter* filter = (struct pwf_filter*)handle;
@@ -228,7 +228,7 @@ void pwf_filter_link_on_info(void* data, const struct pw_link_info* info)
     pwf_log_warning("filter '%s': a linked source became unavailable",
                     filter->name ? filter->name : "pwf-filter");
     if (filter->error_cb)
-        filter->error_cb((pwf_filter_h)filter, (pwf_filter_port_h)port, PWF_ERR_SOURCE_UNAVAILABLE,
+        filter->error_cb(filter, port, PWF_ERR_SOURCE_UNAVAILABLE,
                           filter->user_data);
 }
 
@@ -252,7 +252,7 @@ static void pwf_filter_port_link_release(struct pwf_filter_port* port)
     port->link_lost = false;
 }
 
-int pwf_filter_port_link(pwf_filter_port_h port_handle, const char* target)
+int pwf_filter_port_link(struct pwf_filter_port* port_handle, const char* target)
 {
     struct pwf_filter_port* port = (struct pwf_filter_port*)port_handle;
     if (!port || !target || !*target)
@@ -347,7 +347,7 @@ int pwf_filter_port_link(pwf_filter_port_h port_handle, const char* target)
     return result;
 }
 
-int pwf_filter_port_unlink(pwf_filter_port_h port_handle)
+int pwf_filter_port_unlink(struct pwf_filter_port* port_handle)
 {
     struct pwf_filter_port* port = (struct pwf_filter_port*)port_handle;
     if (!port || port->direction != PWF_FILTER_PORT_INPUT)

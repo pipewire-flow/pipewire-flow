@@ -13,10 +13,10 @@
 #define ABSENT_NODE "pwf-no-such-node-12345"
 
 static int g_error_calls = 0;
-static pwf_filter_port_h g_last_port = NULL;
+static struct pwf_filter_port* g_last_port = NULL;
 static int g_last_error_code = 0;
 
-static void noop_process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers,
+static void noop_process_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n_buffers,
                              void* user_data)
 {
     (void)filter;
@@ -25,7 +25,7 @@ static void noop_process_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers
     (void)user_data;
 }
 
-static void on_error(pwf_filter_h filter, pwf_filter_port_h port, int error_code, void* user_data)
+static void on_error(struct pwf_filter* filter, struct pwf_filter_port* port, int error_code, void* user_data)
 {
     (void)filter;
     (void)user_data;
@@ -34,16 +34,16 @@ static void on_error(pwf_filter_h filter, pwf_filter_port_h port, int error_code
     g_last_error_code = error_code;
 }
 
-static const pwf_audio_config g_audio_cfg = { .sample_rate = 48000, .channels = 2 };
+static const struct pwf_audio_config g_audio_cfg = { .sample_rate = 48000, .channels = 2 };
 
 /* Argument validation that needs no started filter. */
 static void test_invalid_args(void)
 {
-    pwf_filter_h handle = pwf_filter_create("pwf-test-link-args", noop_process_cb, NULL);
+    struct pwf_filter* handle = pwf_filter_create("pwf-test-link-args", noop_process_cb, NULL);
     PWF_ASSERT(handle != NULL);
 
-    pwf_filter_port_h in = pwf_filter_add_audio_port(handle, PWF_FILTER_PORT_INPUT, &g_audio_cfg);
-    pwf_filter_port_h out = pwf_filter_add_audio_port(handle, PWF_FILTER_PORT_OUTPUT, &g_audio_cfg);
+    struct pwf_filter_port* in = pwf_filter_add_audio_port(handle, PWF_FILTER_PORT_INPUT, &g_audio_cfg);
+    struct pwf_filter_port* out = pwf_filter_add_audio_port(handle, PWF_FILTER_PORT_OUTPUT, &g_audio_cfg);
     PWF_ASSERT(in != NULL && out != NULL);
 
     /* NULL handles and empty targets are rejected before anything else. */
@@ -67,10 +67,10 @@ static void test_invalid_args(void)
 /* Target resolution failures, which require a started filter. */
 static void test_unresolvable_target(void)
 {
-    pwf_filter_h handle = pwf_filter_create("pwf-test-link-target", noop_process_cb, NULL);
+    struct pwf_filter* handle = pwf_filter_create("pwf-test-link-target", noop_process_cb, NULL);
     PWF_ASSERT(handle != NULL);
 
-    pwf_filter_port_h in = pwf_filter_add_audio_port(handle, PWF_FILTER_PORT_INPUT, &g_audio_cfg);
+    struct pwf_filter_port* in = pwf_filter_add_audio_port(handle, PWF_FILTER_PORT_INPUT, &g_audio_cfg);
     PWF_ASSERT(in != NULL);
     PWF_ASSERT_EQ(pwf_filter_start(handle), PWF_OK);
 
@@ -92,10 +92,10 @@ static void test_unresolvable_target(void)
  * filter whose every link attempt failed. */
 static void test_unlink_states(void)
 {
-    pwf_filter_h handle = pwf_filter_create("pwf-test-unlink", noop_process_cb, NULL);
+    struct pwf_filter* handle = pwf_filter_create("pwf-test-unlink", noop_process_cb, NULL);
     PWF_ASSERT(handle != NULL);
 
-    pwf_filter_port_h in = pwf_filter_add_audio_port(handle, PWF_FILTER_PORT_INPUT, &g_audio_cfg);
+    struct pwf_filter_port* in = pwf_filter_add_audio_port(handle, PWF_FILTER_PORT_INPUT, &g_audio_cfg);
     PWF_ASSERT(in != NULL);
 
     /* Never linked, before or after start. */
@@ -118,12 +118,12 @@ static void test_unlink_states(void)
  * Physically removing a device is not something a unit test can do. */
 static void test_source_unavailable_notification(void)
 {
-    pwf_filter_h handle = pwf_filter_create("pwf-test-link-notify", noop_process_cb, NULL);
+    struct pwf_filter* handle = pwf_filter_create("pwf-test-link-notify", noop_process_cb, NULL);
     PWF_ASSERT(handle != NULL);
-    PWF_ASSERT_EQ(pwf_filter_set_error_cb(handle, on_error), PWF_OK);
+    PWF_ASSERT_EQ(pwf_filter_set_error_callback(handle, on_error), PWF_OK);
 
-    pwf_filter_port_h port_a = pwf_filter_add_audio_port(handle, PWF_FILTER_PORT_INPUT, &g_audio_cfg);
-    pwf_filter_port_h port_b = pwf_filter_add_audio_port(handle, PWF_FILTER_PORT_INPUT, &g_audio_cfg);
+    struct pwf_filter_port* port_a = pwf_filter_add_audio_port(handle, PWF_FILTER_PORT_INPUT, &g_audio_cfg);
+    struct pwf_filter_port* port_b = pwf_filter_add_audio_port(handle, PWF_FILTER_PORT_INPUT, &g_audio_cfg);
     PWF_ASSERT(port_a != NULL && port_b != NULL);
     PWF_ASSERT_EQ(pwf_filter_start(handle), PWF_OK);
 

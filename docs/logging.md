@@ -5,11 +5,11 @@ library's internal diagnostic messages instead of only seeing raw
 PipeWire stderr output:
 
 ```c
-typedef enum { PWF_LOG_ERROR, PWF_LOG_WARNING, PWF_LOG_INFO, PWF_LOG_DEBUG, PWF_LOG_VERBOSE } pwf_log_level;
-typedef void (*pwf_log_cb)(pwf_log_level level, const char* file, int line, const char* message, void* user_data);
+enum pwf_log_level { PWF_LOG_ERROR, PWF_LOG_WARNING, PWF_LOG_INFO, PWF_LOG_DEBUG, PWF_LOG_VERBOSE };
+typedef void (*pwf_log_func_t)(enum pwf_log_level level, const char* file, int line, const char* message, void* user_data);
 
-void pwf_log_set_callback(pwf_log_cb callback, void* user_data);
-void pwf_log_set_level(pwf_log_level level);
+void pwf_log_set_callback(pwf_log_func_t callback, void* user_data);
+void pwf_log_set_level(enum pwf_log_level level);
 ```
 
 With no callback registered, messages are written to stderr, tagged
@@ -20,7 +20,7 @@ PipeWire's own log output. The minimum level defaults to
 route everything through your own logger:
 
 ```c
-void my_logger(pwf_log_level level, const char* file, int line, const char* message, void* user_data) {
+void my_logger(enum pwf_log_level level, const char* file, int line, const char* message, void* user_data) {
     fprintf(stderr, "[myapp] %s:%d: %s\n", file, line, message);
 }
 pwf_log_set_callback(my_logger, NULL);

@@ -3,8 +3,8 @@
 #include "pwf_spa_format_internal.h"
 #include "pwf_stream_internal.h"
 
-int pwf_stream_set_video_config_ex(pwf_stream_h handle, const pwf_video_config* config,
-                                    const pwf_stream_dmabuf_opts* opts)
+int pwf_stream_set_video_config_ex(struct pwf_stream* handle, const struct pwf_video_config* config,
+                                    const struct pwf_stream_dmabuf_opts* opts)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     if (!stream || stream->type != PWF_DATA_VIDEO || !config || !config->pixel_format)
@@ -63,7 +63,7 @@ int pwf_stream_set_video_config_ex(pwf_stream_h handle, const pwf_video_config* 
     return PWF_OK;
 }
 
-int pwf_stream_set_video_config(pwf_stream_h handle, const pwf_video_config* config)
+int pwf_stream_set_video_config(struct pwf_stream* handle, const struct pwf_video_config* config)
 {
     return pwf_stream_set_video_config_ex(handle, config, NULL);
 }

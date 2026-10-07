@@ -18,6 +18,6 @@ bool pwf_dmabuf_buffer_present(struct spa_buffer* b);
 /* Fills up to `planes_len` entries of `planes` with every DMABUF-typed
  * plane of `b` and returns the plane count. Shared by pwf_filter and
  * pwf_stream. */
-size_t pwf_dmabuf_extract_planes(struct spa_buffer* b, pwf_dmabuf_plane* planes, size_t planes_len);
+size_t pwf_dmabuf_extract_planes(struct spa_buffer* b, struct pwf_dmabuf_plane* planes, size_t planes_len);
 
 #endif /* PWF_DMABUF_INTERNAL_H */

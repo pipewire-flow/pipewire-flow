@@ -23,7 +23,7 @@ static void on_signal(int sig)
     g_running = 0;
 }
 
-static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
+static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)buf;
@@ -31,7 +31,7 @@ static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* use
     g_buffers++;
 }
 
-static void on_error(pwf_stream_h stream, int error_code, void* user_data)
+static void on_error(struct pwf_stream* stream, int error_code, void* user_data)
 {
     (void)stream;
     (void)user_data;
@@ -60,12 +60,12 @@ int main(int argc, char** argv)
 
     signal(SIGINT, on_signal);
 
-    pwf_stream_h s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
+    struct pwf_stream* s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
     if (!s) {
         fprintf(stderr, "failed to create stream (is PipeWire running?)\n");
         return 1;
     }
-    pwf_stream_set_error_cb(s, on_error);
+    pwf_stream_set_error_callback(s, on_error);
 
     /* From here the session manager will not wire this stream. */
     if (pwf_stream_set_autoconnect(s, false) != PWF_OK) {
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2, .format = "S16" };
+    struct pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2, .format = "S16" };
     if (pwf_stream_set_audio_config(s, &cfg) != PWF_OK ||
         pwf_stream_start(s) != PWF_OK) {
         fprintf(stderr, "failed to configure or start the stream\n");
