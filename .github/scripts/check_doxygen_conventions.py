@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checks the Doxygen comments in include/tpw/*.h against three rules:
+"""Checks the Doxygen comments in include/pwf/*.h against three rules:
 
 1. Every function/callback's actual parameter order has every @param[out]
    (and @param[in,out]) after every @param[in] (params with no direction
@@ -7,7 +7,7 @@
    immediately followed by its own `<name>_len` capacity in-param. That
    specific adjacent pair is allowed in either order, keeping an array
    and its capacity next to each other: this project's
-   tpw_stream_get_dmabuf_planes()/tpw_filter_port_get_dmabuf_planes() use it for
+   pwf_stream_get_dmabuf_planes()/pwf_filter_port_get_dmabuf_planes() use it for
    their `planes`/`planes_len` pair.
 2. Every function/callback/type has a doc block with @brief; every
    non-void function/callback also has @return; the @param name list
@@ -18,7 +18,7 @@
 
 Usage: check_doxygen_conventions.py <header.h> [<header.h> ...]
 Exits 1 and prints every violation found, across all given headers,
-combined (so e.g. a tpw_filter.h @see can resolve to a tpw_stream.h
+combined (so e.g. a pwf_filter.h @see can resolve to a pwf_stream.h
 symbol). Exits 0 with a one-line summary otherwise.
 """
 import re
@@ -29,8 +29,8 @@ EXTERN_C_OPEN_RE = re.compile(r'#ifdef __cplusplus\s*\nextern "C" \{\s*\n#endif\
 EXTERN_C_CLOSE_RE = re.compile(r'#ifdef __cplusplus\s*\n\}\s*\n#endif\n?')
 PARAM_TAG_RE = re.compile(r'@param(?:\[(in|out|in,out)\])?\s+(\w+)')
 SEE_RE = re.compile(r'@see\s+(\w+)')
-TPW_IDENT_RE = re.compile(r'\btpw_[A-Za-z0-9_]+\b')
-ENUM_IDENT_RE = re.compile(r'\bTPW_[A-Z0-9_]+\b')
+PWF_IDENT_RE = re.compile(r'\bpwf_[A-Za-z0-9_]+\b')
+ENUM_IDENT_RE = re.compile(r'\bPWF_[A-Z0-9_]+\b')
 
 
 def strip_comments(s):
@@ -85,7 +85,7 @@ def tokenize(text):
 def analyze_decl(decl_text):
     """Returns (name, is_void, params) for a function/callback decl, or
     (name, None, None) for a struct/enum/opaque-handle typedef."""
-    code = re.sub(r'\bTPW_API\b', '', strip_comments(decl_text))
+    code = re.sub(r'\bPWF_API\b', '', strip_comments(decl_text))
     if '(' not in code:
         m = re.search(r'(\w+)\s*;\s*$', code)
         return (m.group(1) if m else None), None, None
@@ -94,7 +94,7 @@ def analyze_decl(decl_text):
     close_idx = code.rindex(')')
     params_text = code[open_idx + 1:close_idx]
     before = code[:open_idx]
-    idents = list(TPW_IDENT_RE.finditer(before))
+    idents = list(PWF_IDENT_RE.finditer(before))
     if not idents:
         return None, None, None
     name = idents[-1].group(0)

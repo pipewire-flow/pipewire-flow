@@ -16,14 +16,14 @@
 #include <time.h>
 #include <unistd.h>
 
-#include <tpw/tpw_filter.h>
+#include <pwf/pwf_filter.h>
 
-#include "tpw_test.h"
+#include "pwf_test.h"
 
 #define TEST_SKIP 77
 
 /* Monotonic capture time in nanoseconds, the same clock domain
- * tpw_filter_port_buffer.pts otherwise carries from a real driver. One
+ * pwf_filter_port_buffer.pts otherwise carries from a real driver. One
  * reading per cycle here, so this is the exact sample time — no batching
  * blurs it the way it does in test_filter_sensor_latency_hw. */
 static int64_t now_ns(void)
@@ -73,7 +73,7 @@ static const char* find_sensor(void)
 
 struct run {
     const char* sensor;
-    tpw_filter_port_h port;
+    pwf_filter_port_h port;
     unsigned cycles;
     unsigned with_data;
     float last_celsius;
@@ -82,7 +82,7 @@ struct run {
     unsigned pts_backwards; /* a later cycle reporting an earlier pts */
 };
 
-static void on_process(tpw_filter_h filter, tpw_filter_port_buffer* buffers, size_t n, void* user_data)
+static void on_process(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     struct run* r = user_data;
     r->cycles++;
@@ -106,7 +106,7 @@ static void on_process(tpw_filter_h filter, tpw_filter_port_buffer* buffers, siz
     long milli = 0;
     if (read_millidegrees(r->sensor, &milli)) {
         float celsius = (float)milli / 1000.0f;
-        tpw_filter_push_port_data(filter, r->port, &celsius, sizeof(celsius), now_ns());
+        pwf_filter_push_port_data(filter, r->port, &celsius, sizeof(celsius), now_ns());
     }
 }
 
@@ -116,19 +116,19 @@ static void measure(const char* sensor, uint32_t hint_ns, struct run* out)
 {
     struct run r = { .sensor = sensor, .last_celsius = -1.0f };
 
-    tpw_filter_h filter = tpw_filter_create("tpw-hw-sensor-dummy", on_process, &r);
-    TPW_ASSERT(filter != NULL);
+    pwf_filter_h filter = pwf_filter_create("pwf-hw-sensor-dummy", on_process, &r);
+    PWF_ASSERT(filter != NULL);
 
-    r.port = tpw_filter_add_signal_port(filter, TPW_FILTER_PORT_INPUT);
-    TPW_ASSERT(r.port != NULL);
+    r.port = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
+    PWF_ASSERT(r.port != NULL);
 
     if (hint_ns > 0)
-        TPW_ASSERT_EQ(tpw_filter_set_period_hint(filter, hint_ns), TPW_OK);
+        PWF_ASSERT_EQ(pwf_filter_set_period_hint(filter, hint_ns), PWF_OK);
 
-    TPW_ASSERT_EQ(tpw_filter_start(filter), TPW_OK);
+    PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
     usleep(RUN_MS * 1000);
-    tpw_filter_stop(filter, false);
-    tpw_filter_destroy(filter);
+    pwf_filter_stop(filter, false);
+    pwf_filter_destroy(filter);
 
     *out = r;
 }
@@ -142,7 +142,7 @@ int main(void)
     }
 
     long milli = 0;
-    TPW_ASSERT(read_millidegrees(sensor, &milli));
+    PWF_ASSERT(read_millidegrees(sensor, &milli));
     printf("sensor: %s (%.1f C)\n", sensor, milli / 1000.0);
 
     struct run base = { 0 }, fast = { 0 };
@@ -157,28 +157,28 @@ int main(void)
 
     /* Nothing is linked, so the callback only runs at all because PipeWire
      * put the filter on its Dummy-Driver. */
-    TPW_ASSERT(base.cycles > 0);
-    TPW_ASSERT(fast.cycles > 0);
+    PWF_ASSERT(base.cycles > 0);
+    PWF_ASSERT(fast.cycles > 0);
 
     /* Pushed data still reaches the callback with no graph source present.
      * The first cycle runs before anything has been staged. */
-    TPW_ASSERT(base.with_data + 1 >= base.cycles);
-    TPW_ASSERT(fast.with_data + 1 >= fast.cycles);
-    TPW_ASSERT(fast.last_celsius > 0.0f && fast.last_celsius < 150.0f);
+    PWF_ASSERT(base.with_data + 1 >= base.cycles);
+    PWF_ASSERT(fast.with_data + 1 >= fast.cycles);
+    PWF_ASSERT(fast.last_celsius > 0.0f && fast.last_celsius < 150.0f);
 
     /* One reading per cycle carries its own exact capture time: pts arrives
      * with every delivered value, and later cycles never report an earlier
      * one, since each push happens strictly after the previous cycle's. */
-    TPW_ASSERT_EQ(fast.pts_present, fast.with_data);
-    TPW_ASSERT_EQ(fast.pts_backwards, (unsigned)0);
+    PWF_ASSERT_EQ(fast.pts_present, fast.with_data);
+    PWF_ASSERT_EQ(fast.pts_backwards, (unsigned)0);
 
     /* The hint drives the Dummy-Driver exactly as it drives a hardware one.
      * It is an upper bound, so only tighten when the default left room — a
      * machine already running a small quantum has none. */
-    TPW_ASSERT(fast_ms <= base_ms * 1.2);
+    PWF_ASSERT(fast_ms <= base_ms * 1.2);
     if (base_ms > HINT_NS / 1000000.0) {
-        TPW_ASSERT(fast_ms <= HINT_NS / 1000000.0);
-        TPW_ASSERT(fast.cycles > base.cycles);
+        PWF_ASSERT(fast_ms <= HINT_NS / 1000000.0);
+        PWF_ASSERT(fast.cycles > base.cycles);
     }
 
     return 0;

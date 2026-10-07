@@ -13,24 +13,24 @@ add_project_arguments('-D_GNU_SOURCE', language: 'c')
 # 0.3.50 is where pw_buffer.requested landed; playback needs it to size a cycle.
 pipewire_dep = dependency('libpipewire-0.3', version: '>=0.3.50')
 
-tpw_inc = include_directories('include')
+pwf_inc = include_directories('include')
 
-subdir('include/tpw')
+subdir('include/pwf')
 subdir('src')
 
 pipewire_flow_dep = declare_dependency(
   link_with: pipewire_flow_lib,
-  include_directories: tpw_inc,
+  include_directories: pwf_inc,
   dependencies: [pipewire_dep],
 )
 
 install_headers(
-  'include/tpw/tpw_stream.h',
-  'include/tpw/tpw_filter.h',
-  'include/tpw/tpw_log.h',
-  'include/tpw/tpw_types.h',
-  'include/tpw/tpw_export.h',
-  subdir: 'tpw',
+  'include/pwf/pwf_stream.h',
+  'include/pwf/pwf_filter.h',
+  'include/pwf/pwf_log.h',
+  'include/pwf/pwf_types.h',
+  'include/pwf/pwf_export.h',
+  subdir: 'pwf',
 )
 
 pkg = import('pkgconfig')

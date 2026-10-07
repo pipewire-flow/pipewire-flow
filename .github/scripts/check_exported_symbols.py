@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Checks that a library exports exactly its public header functions, each marked TPW_API.
+"""Checks that a library exports exactly its public header functions, each marked PWF_API.
 Usage: check_exported_symbols.py <nm> <library> <header.h> [<header.h> ...]"""
 import re
 import subprocess
 import sys
 
 COMMENT_RE = re.compile(r'/\*.*?\*/', re.DOTALL)
-NAME_RE = re.compile(r'\b(tpw_[a-z0-9_]+)\s*\(')
+NAME_RE = re.compile(r'\b(pwf_[a-z0-9_]+)\s*\(')
 SKIPPED_LINES = ('#', 'extern "C" {', '}')
 
 
@@ -23,8 +23,8 @@ def declared_functions(paths, errors):
             if not match:
                 continue
             names.add(match.group(1))
-            if not re.search(r'\bTPW_API\b', decl):
-                errors.append(f"{path}: {match.group(1)}() is declared without TPW_API, so it is not exported")
+            if not re.search(r'\bPWF_API\b', decl):
+                errors.append(f"{path}: {match.group(1)}() is declared without PWF_API, so it is not exported")
     return names
 
 

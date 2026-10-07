@@ -33,7 +33,7 @@ unit_tests = [
 src_inc = include_directories('../src')
 pipewire_flow_objects = pipewire_flow_lib.extract_all_objects(recursive: true)
 pipewire_flow_internal_dep = declare_dependency(
-  include_directories: [tpw_inc, src_inc],
+  include_directories: [pwf_inc, src_inc],
   dependencies: [pipewire_dep, dependency('threads')],
 )
 
@@ -60,7 +60,7 @@ hardware_tests = [
 ]
 
 foreach name : hardware_tests
-  exe = executable(name, [name + '.c', 'tpw_test_hw_discover.c'],
+  exe = executable(name, [name + '.c', 'pwf_test_hw_discover.c'],
     objects: pipewire_flow_objects,
     dependencies: [pipewire_flow_internal_dep],
   )
@@ -78,14 +78,14 @@ if python3_prog.found()
   test('check_doxygen_conventions', python3_prog,
     args: [
       files('../.github/scripts/check_doxygen_conventions.py'),
-      meson.project_source_root() / 'include' / 'tpw' / 'tpw_types.h',
-      meson.project_source_root() / 'include' / 'tpw' / 'tpw_stream.h',
-      meson.project_source_root() / 'include' / 'tpw' / 'tpw_filter.h',
+      meson.project_source_root() / 'include' / 'pwf' / 'pwf_types.h',
+      meson.project_source_root() / 'include' / 'pwf' / 'pwf_stream.h',
+      meson.project_source_root() / 'include' / 'pwf' / 'pwf_filter.h',
     ],
   )
 
   # Only the functions declared in the public headers may leave the shared
-  # library; an internal symbol or a missing TPW_API fails this test.
+  # library; an internal symbol or a missing PWF_API fails this test.
   nm_prog = find_program('nm', required: false)
   if nm_prog.found()
     test('check_exported_symbols', python3_prog,
@@ -93,10 +93,10 @@ if python3_prog.found()
         files('../.github/scripts/check_exported_symbols.py'),
         nm_prog.full_path(),
         pipewire_flow_lib,
-        meson.project_source_root() / 'include' / 'tpw' / 'tpw_types.h',
-        meson.project_source_root() / 'include' / 'tpw' / 'tpw_stream.h',
-        meson.project_source_root() / 'include' / 'tpw' / 'tpw_filter.h',
-        meson.project_source_root() / 'include' / 'tpw' / 'tpw_log.h',
+        meson.project_source_root() / 'include' / 'pwf' / 'pwf_types.h',
+        meson.project_source_root() / 'include' / 'pwf' / 'pwf_stream.h',
+        meson.project_source_root() / 'include' / 'pwf' / 'pwf_filter.h',
+        meson.project_source_root() / 'include' / 'pwf' / 'pwf_log.h',
       ],
     )
   endif

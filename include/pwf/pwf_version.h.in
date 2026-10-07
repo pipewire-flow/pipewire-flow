@@ -1,0 +1,22 @@
+/* SPDX-License-Identifier: MIT */
+
+/**
+ * @file pwf_version.h
+ * @brief Compile-time library version, generated from the project's meson
+ *        version at build time.
+ */
+
+#ifndef PWF_VERSION_H
+#define PWF_VERSION_H
+
+#define PWF_VERSION_MAJOR @PWF_VERSION_MAJOR@
+#define PWF_VERSION_MINOR @PWF_VERSION_MINOR@
+#define PWF_VERSION_PATCH @PWF_VERSION_PATCH@
+
+/** @brief True if this header declares at least major.minor.patch. */
+#define PWF_CHECK_VERSION(major, minor, patch) \
+    (PWF_VERSION_MAJOR > (major) || \
+     (PWF_VERSION_MAJOR == (major) && PWF_VERSION_MINOR > (minor)) || \
+     (PWF_VERSION_MAJOR == (major) && PWF_VERSION_MINOR == (minor) && PWF_VERSION_PATCH >= (patch)))
+
+#endif /* PWF_VERSION_H */

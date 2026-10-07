@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "tpw/tpw_stream.h"
+#include "pwf/pwf_stream.h"
 
 static volatile sig_atomic_t g_running = 1;
 
@@ -14,12 +14,12 @@ static void on_signal(int sig)
     g_running = 0;
 }
 
-static void on_data(tpw_stream_h stream, const tpw_stream_buffer* buf, void* user_data)
+static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
 {
     (void)user_data;
 
-    tpw_dmabuf_plane planes[4];
-    size_t n_planes = tpw_stream_get_dmabuf_planes(stream, planes, 4);
+    pwf_dmabuf_plane planes[4];
+    size_t n_planes = pwf_stream_get_dmabuf_planes(stream, planes, 4);
     if (n_planes == 0) {
         printf("video: frame with no DMABUF plane (pts=%lld ns)\n", (long long)buf->pts);
         return;
@@ -29,7 +29,7 @@ static void on_data(tpw_stream_h stream, const tpw_stream_buffer* buf, void* use
            planes[0].stride, planes[0].size, (long long)buf->pts);
 }
 
-static void on_error(tpw_stream_h stream, int error_code, void* user_data)
+static void on_error(pwf_stream_h stream, int error_code, void* user_data)
 {
     (void)stream;
     (void)user_data;
@@ -41,25 +41,25 @@ int main(void)
 {
     signal(SIGINT, on_signal);
 
-    tpw_stream_h stream = tpw_stream_create(TPW_DATA_VIDEO, on_data, NULL);
+    pwf_stream_h stream = pwf_stream_create(PWF_DATA_VIDEO, on_data, NULL);
     if (!stream) {
         fprintf(stderr, "failed to create video stream (is PipeWire running?)\n");
         return 1;
     }
 
-    tpw_stream_set_error_cb(stream, on_error);
+    pwf_stream_set_error_cb(stream, on_error);
 
-    tpw_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
-    tpw_stream_dmabuf_opts opts = { .memory = TPW_PORT_MEMORY_DMABUF };
-    if (tpw_stream_set_video_config_ex(stream, &cfg, &opts) != TPW_OK) {
+    pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
+    pwf_stream_dmabuf_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    if (pwf_stream_set_video_config_ex(stream, &cfg, &opts) != PWF_OK) {
         fprintf(stderr, "failed to request DMABUF video format\n");
-        tpw_stream_destroy(stream);
+        pwf_stream_destroy(stream);
         return 1;
     }
 
-    if (tpw_stream_start(stream) != TPW_OK) {
+    if (pwf_stream_start(stream) != PWF_OK) {
         fprintf(stderr, "failed to start video stream\n");
-        tpw_stream_destroy(stream);
+        pwf_stream_destroy(stream);
         return 1;
     }
 
@@ -67,7 +67,7 @@ int main(void)
     while (g_running)
         sleep(1);
 
-    tpw_stream_stop(stream, false);
-    tpw_stream_destroy(stream);
+    pwf_stream_stop(stream, false);
+    pwf_stream_destroy(stream);
     return 0;
 }

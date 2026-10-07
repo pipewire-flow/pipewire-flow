@@ -18,15 +18,15 @@
 #include <time.h>
 #include <unistd.h>
 
-#include <tpw/tpw_filter.h>
+#include <pwf/pwf_filter.h>
 
-#include "tpw_test.h"
-#include "tpw_test_hw_discover.h"
+#include "pwf_test.h"
+#include "pwf_test_hw_discover.h"
 
 #define TEST_SKIP 77
 
 /* Monotonic capture time in nanoseconds, the same clock domain
- * tpw_filter_port_buffer.pts otherwise carries from a real driver. A pushed
+ * pwf_filter_port_buffer.pts otherwise carries from a real driver. A pushed
  * *block* only gets one pts for the whole buffer, not one per sample inside
  * it, so this records when the last sample in the block was read — good
  * enough to align the block against the camera's own per-frame pts, but not
@@ -89,10 +89,10 @@ static const char* find_sensor(void)
 
 struct bundle {
     const char* sensor;
-    tpw_filter_h filter;
-    tpw_filter_port_h video;
-    tpw_filter_port_h mic;
-    tpw_filter_port_h temp;
+    pwf_filter_h filter;
+    pwf_filter_port_h video;
+    pwf_filter_port_h mic;
+    pwf_filter_port_h temp;
 
     unsigned cycles;
     unsigned video_fresh;   /* a new camera frame arrived */
@@ -111,18 +111,18 @@ struct bundle {
     unsigned sampled;       /* samples the sensor thread produced */
 };
 
-static void on_process(tpw_filter_h filter, tpw_filter_port_buffer* buffers, size_t n, void* user_data)
+static void on_process(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     struct bundle* b = user_data;
     (void)filter;
     b->cycles++;
 
     for (size_t i = 0; i < n; i++) {
-        tpw_filter_port_buffer* buf = &buffers[i];
+        pwf_filter_port_buffer* buf = &buffers[i];
 
         if (buf->port == b->video) {
-            tpw_dmabuf_plane plane;
-            if (tpw_filter_port_get_dmabuf_planes(buf, &plane, 1) > 0) {
+            pwf_dmabuf_plane plane;
+            if (pwf_filter_port_get_dmabuf_planes(buf, &plane, 1) > 0) {
                 if (buf->fresh) {
                     b->video_fresh++;
                 } else {
@@ -169,7 +169,7 @@ static void* sensor_thread(void* arg)
                 /* The block's pts is when its last sample was read, not
                  * when the block happens to be delivered — the two can
                  * differ by up to a cycle if the push lands mid-cycle. */
-                tpw_filter_push_port_data(b->filter, b->temp, batch, n * sizeof(float), last_sample_pts);
+                pwf_filter_push_port_data(b->filter, b->temp, batch, n * sizeof(float), last_sample_pts);
                 n = 0;
             }
         }
@@ -185,36 +185,36 @@ static void run_bundle(const char* camera, const char* mic, const char* sensor, 
 {
     struct bundle b = { .sensor = sensor, .held_fd = -1, .last_celsius = -1.0f };
 
-    tpw_filter_h filter = tpw_filter_create("tpw-hw-bundle", on_process, &b);
-    TPW_ASSERT(filter != NULL);
+    pwf_filter_h filter = pwf_filter_create("pwf-hw-bundle", on_process, &b);
+    PWF_ASSERT(filter != NULL);
 
-    tpw_video_config vcfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
-    tpw_filter_port_opts opts = { .memory = TPW_PORT_MEMORY_DMABUF };
-    b.video = tpw_filter_add_video_port_ex(filter, TPW_FILTER_PORT_INPUT, &vcfg, &opts);
-    b.mic = tpw_filter_add_signal_port(filter, TPW_FILTER_PORT_INPUT);
-    b.temp = tpw_filter_add_signal_port(filter, TPW_FILTER_PORT_INPUT);
-    TPW_ASSERT(b.video != NULL && b.mic != NULL && b.temp != NULL);
+    pwf_video_config vcfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
+    pwf_filter_port_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    b.video = pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &vcfg, &opts);
+    b.mic = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
+    b.temp = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
+    PWF_ASSERT(b.video != NULL && b.mic != NULL && b.temp != NULL);
 
     if (hold)
-        TPW_ASSERT_EQ(tpw_filter_port_set_hold(b.video, true), TPW_OK);
-    TPW_ASSERT_EQ(tpw_filter_set_period_hint(filter, HINT_NS), TPW_OK);
-    TPW_ASSERT_EQ(tpw_filter_start(filter), TPW_OK);
+        PWF_ASSERT_EQ(pwf_filter_port_set_hold(b.video, true), PWF_OK);
+    PWF_ASSERT_EQ(pwf_filter_set_period_hint(filter, HINT_NS), PWF_OK);
+    PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
 
-    TPW_ASSERT_EQ(tpw_filter_port_link(b.video, camera), TPW_OK);
-    TPW_ASSERT_EQ(tpw_filter_port_link(b.mic, mic), TPW_OK);
+    PWF_ASSERT_EQ(pwf_filter_port_link(b.video, camera), PWF_OK);
+    PWF_ASSERT_EQ(pwf_filter_port_link(b.mic, mic), PWF_OK);
 
     b.filter = filter;
     b.sampling = 1;
     pthread_t sampler;
-    TPW_ASSERT_EQ(pthread_create(&sampler, NULL, sensor_thread, &b), 0);
+    PWF_ASSERT_EQ(pthread_create(&sampler, NULL, sensor_thread, &b), 0);
 
     usleep(RUN_MS * 1000);
 
     b.sampling = 0;
     pthread_join(sampler, NULL);
 
-    tpw_filter_stop(filter, false);
-    tpw_filter_destroy(filter);
+    pwf_filter_stop(filter, false);
+    pwf_filter_destroy(filter);
     *out = b;
 }
 
@@ -222,8 +222,8 @@ int main(void)
 {
     char camera[256], mic[256];
     const char* sensor = find_sensor();
-    bool have_camera = tpw_test_find_node("Video/Source", camera, sizeof(camera));
-    bool have_mic = tpw_test_find_node("Audio/Source", mic, sizeof(mic));
+    bool have_camera = pwf_test_find_node("Video/Source", camera, sizeof(camera));
+    bool have_mic = pwf_test_find_node("Audio/Source", mic, sizeof(mic));
 
     if (!sensor || !have_camera || !have_mic) {
         printf("need a camera, a microphone and a temperature sensor; skipping\n");
@@ -243,31 +243,31 @@ int main(void)
 
     /* The hint applies even though the microphone, being hardware-clocked,
      * is what actually drives the graph. */
-    TPW_ASSERT(held.cycles > 0);
-    TPW_ASSERT(period_ms <= HINT_NS / 1000000.0);
+    PWF_ASSERT(held.cycles > 0);
+    PWF_ASSERT(period_ms <= HINT_NS / 1000000.0);
 
     /* Batching is the point: the sensor runs faster than the cycle, so most
      * of its readings would be overwritten if pushed one at a time. Landing
      * anywhere near what was sampled means the blocks came through whole —
      * one-at-a-time pushing scores about a fifth of this. */
-    TPW_ASSERT(held.sampled > 0);
-    TPW_ASSERT(held.temp_values > held.sampled / 2);
-    TPW_ASSERT(held.temp_values > held.temp_cycles); /* several samples per cycle */
-    TPW_ASSERT(held.last_celsius > 0.0f && held.last_celsius < 150.0f);
+    PWF_ASSERT(held.sampled > 0);
+    PWF_ASSERT(held.temp_values > held.sampled / 2);
+    PWF_ASSERT(held.temp_values > held.temp_cycles); /* several samples per cycle */
+    PWF_ASSERT(held.last_celsius > 0.0f && held.last_celsius < 150.0f);
 
     /* Every delivered block carries the capture time of its last sample,
      * and later blocks never report an earlier one. */
-    TPW_ASSERT_EQ(held.temp_pts_present, held.temp_cycles);
-    TPW_ASSERT_EQ(held.temp_pts_backwards, (unsigned)0);
+    PWF_ASSERT_EQ(held.temp_pts_present, held.temp_cycles);
+    PWF_ASSERT_EQ(held.temp_pts_backwards, (unsigned)0);
 
     /* The microphone drives, so it delivers on nearly every cycle. */
-    TPW_ASSERT(held.mic_cycles > held.cycles / 2);
+    PWF_ASSERT(held.mic_cycles > held.cycles / 2);
 
     /* The camera is far slower than the cycle, so most cycles fall between
      * its frames and re-present the previous frame's descriptor. */
     if (held.video_fresh > 0) {
-        TPW_ASSERT(held.video_held > held.video_fresh);
-        TPW_ASSERT(held.held_fd >= 0);
+        PWF_ASSERT(held.video_held > held.video_fresh);
+        PWF_ASSERT(held.held_fd >= 0);
     } else {
         printf("  note: camera linked but negotiated no DMABUF frames\n");
     }
@@ -279,9 +279,9 @@ int main(void)
     printf("  hold off: %u cycles  video fresh=%u held=%u absent=%u\n", plain.cycles, plain.video_fresh,
            plain.video_held, plain.video_absent);
 
-    TPW_ASSERT_EQ(plain.video_held, (unsigned)0);
+    PWF_ASSERT_EQ(plain.video_held, (unsigned)0);
     if (plain.video_fresh > 0)
-        TPW_ASSERT(plain.video_absent > 0);
+        PWF_ASSERT(plain.video_absent > 0);
 
     return 0;
 }

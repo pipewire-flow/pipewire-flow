@@ -7,10 +7,10 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "tpw_stream_internal.h"
-#include "tpw_test.h"
+#include "pwf_stream_internal.h"
+#include "pwf_test.h"
 
-static const tpw_audio_config g_cfg = { .sample_rate = 48000, .channels = 2 };
+static const pwf_audio_config g_cfg = { .sample_rate = 48000, .channels = 2 };
 
 static double now_ms(void)
 {
@@ -19,47 +19,47 @@ static double now_ms(void)
     return ts.tv_sec * 1e3 + ts.tv_nsec / 1e6;
 }
 
-static void on_data(tpw_stream_h stream, const tpw_stream_buffer* buf, void* user_data)
+static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     (void)buf;
     (void)user_data;
 }
 
-static tpw_stream_h make_running_stream(void)
+static pwf_stream_h make_running_stream(void)
 {
-    tpw_stream_h s = tpw_stream_create(TPW_DATA_AUDIO, on_data, NULL);
-    TPW_ASSERT(s != NULL);
-    TPW_ASSERT_EQ(tpw_stream_set_autoconnect(s, false), TPW_OK);
-    TPW_ASSERT_EQ(tpw_stream_set_audio_config(s, &g_cfg), TPW_OK);
-    TPW_ASSERT_EQ(tpw_stream_start(s), TPW_OK);
+    pwf_stream_h s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
+    PWF_ASSERT(s != NULL);
+    PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_audio_config(s, &g_cfg), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_start(s), PWF_OK);
     return s;
 }
 
 /* Inside the data callback every call taking the loop lock is refused at once. */
 static void test_calls_refused_in_data_callback(void)
 {
-    tpw_stream_h s = make_running_stream();
+    pwf_stream_h s = make_running_stream();
     size_t found = 99;
 
-    tpw_stream_processing = (struct tpw_stream*)s;
-    TPW_ASSERT_EQ(tpw_stream_start(s), TPW_ERR_IN_CALLBACK);
-    TPW_ASSERT_EQ(tpw_stream_stop(s, false), TPW_ERR_IN_CALLBACK);
-    TPW_ASSERT_EQ(tpw_stream_set_audio_config(s, &g_cfg), TPW_ERR_IN_CALLBACK);
-    TPW_ASSERT_EQ(tpw_stream_get_target_list(s, NULL, 0, &found), TPW_ERR_IN_CALLBACK);
+    pwf_stream_processing = (struct pwf_stream*)s;
+    PWF_ASSERT_EQ(pwf_stream_start(s), PWF_ERR_IN_CALLBACK);
+    PWF_ASSERT_EQ(pwf_stream_stop(s, false), PWF_ERR_IN_CALLBACK);
+    PWF_ASSERT_EQ(pwf_stream_set_audio_config(s, &g_cfg), PWF_ERR_IN_CALLBACK);
+    PWF_ASSERT_EQ(pwf_stream_get_target_list(s, NULL, 0, &found), PWF_ERR_IN_CALLBACK);
     double t0 = now_ms();
-    TPW_ASSERT_EQ(tpw_stream_link(s, "tpw-test-no-such-node"), TPW_ERR_IN_CALLBACK);
-    TPW_ASSERT(now_ms() - t0 < 1000.0); /* It is refused instead of waiting for the stream's ports. */
-    tpw_stream_destroy(s);
-    tpw_stream_processing = NULL;
+    PWF_ASSERT_EQ(pwf_stream_link(s, "pwf-test-no-such-node"), PWF_ERR_IN_CALLBACK);
+    PWF_ASSERT(now_ms() - t0 < 1000.0); /* It is refused instead of waiting for the stream's ports. */
+    pwf_stream_destroy(s);
+    pwf_stream_processing = NULL;
 
-    TPW_ASSERT_EQ(tpw_stream_set_role(s, "Music"), TPW_OK); /* The refused destroy left it alive. */
-    TPW_ASSERT_EQ(tpw_stream_stop(s, false), TPW_OK);
-    tpw_stream_destroy(s);
+    PWF_ASSERT_EQ(pwf_stream_set_role(s, "Music"), PWF_OK); /* The refused destroy left it alive. */
+    PWF_ASSERT_EQ(pwf_stream_stop(s, false), PWF_OK);
+    pwf_stream_destroy(s);
 }
 
 struct loop_calls {
-    struct tpw_stream* stream;
+    struct pwf_stream* stream;
     int in_loop_thread;
     int link;
     double link_ms;
@@ -79,18 +79,18 @@ static int call_on_loop(struct spa_loop* loop, bool async, uint32_t seq, const v
     (void)data;
     (void)size;
     struct loop_calls* c = user_data;
-    tpw_stream_h s = (tpw_stream_h)c->stream;
+    pwf_stream_h s = (pwf_stream_h)c->stream;
     size_t found = 0;
 
     c->in_loop_thread = pw_thread_loop_in_thread(c->stream->conn.loop);
-    tpw_stream_destroy(s); /* It is refused, so the calls below still have a stream. */
+    pwf_stream_destroy(s); /* It is refused, so the calls below still have a stream. */
     double t0 = now_ms();
-    c->link = tpw_stream_link(s, "tpw-test-no-such-node");
+    c->link = pwf_stream_link(s, "pwf-test-no-such-node");
     c->link_ms = now_ms() - t0;
-    c->targets = tpw_stream_get_target_list(s, NULL, 0, &found);
-    c->config = tpw_stream_set_audio_config(s, &g_cfg);
-    c->stop_drain = tpw_stream_stop(s, true);
-    c->stop = tpw_stream_stop(s, false);
+    c->targets = pwf_stream_get_target_list(s, NULL, 0, &found);
+    c->config = pwf_stream_set_audio_config(s, &g_cfg);
+    c->stop_drain = pwf_stream_stop(s, true);
+    c->stop = pwf_stream_stop(s, false);
     atomic_store(&c->done, 1);
     return 0;
 }
@@ -98,8 +98,8 @@ static int call_on_loop(struct spa_loop* loop, bool async, uint32_t seq, const v
 /* On the loop thread, where the error callback runs, calls that would wait on it are refused. */
 static void test_calls_refused_on_loop_thread(void)
 {
-    tpw_stream_h s = make_running_stream();
-    struct loop_calls c = { .stream = (struct tpw_stream*)s, .in_loop_thread = -1 };
+    pwf_stream_h s = make_running_stream();
+    struct loop_calls c = { .stream = (struct pwf_stream*)s, .in_loop_thread = -1 };
 
     /* A blocking invoke from outside breaks the thread loop's lock count, so this one queues and polls. */
     pw_thread_loop_lock(c.stream->conn.loop);
@@ -108,15 +108,15 @@ static void test_calls_refused_on_loop_thread(void)
     for (int i = 0; i < 300 && !atomic_load(&c.done); i++)
         usleep(10000);
 
-    TPW_ASSERT(atomic_load(&c.done));
-    TPW_ASSERT_EQ(c.in_loop_thread, 1);
-    TPW_ASSERT_EQ(c.link, TPW_ERR_IN_CALLBACK);
-    TPW_ASSERT(c.link_ms < 1000.0);
-    TPW_ASSERT_EQ(c.targets, TPW_ERR_IN_CALLBACK);
-    TPW_ASSERT_EQ(c.config, TPW_ERR_IN_CALLBACK);
-    TPW_ASSERT_EQ(c.stop_drain, TPW_ERR_IN_CALLBACK);
-    TPW_ASSERT_EQ(c.stop, TPW_OK); /* A stop that does not drain waits on nothing. */
-    tpw_stream_destroy(s);
+    PWF_ASSERT(atomic_load(&c.done));
+    PWF_ASSERT_EQ(c.in_loop_thread, 1);
+    PWF_ASSERT_EQ(c.link, PWF_ERR_IN_CALLBACK);
+    PWF_ASSERT(c.link_ms < 1000.0);
+    PWF_ASSERT_EQ(c.targets, PWF_ERR_IN_CALLBACK);
+    PWF_ASSERT_EQ(c.config, PWF_ERR_IN_CALLBACK);
+    PWF_ASSERT_EQ(c.stop_drain, PWF_ERR_IN_CALLBACK);
+    PWF_ASSERT_EQ(c.stop, PWF_OK); /* A stop that does not drain waits on nothing. */
+    pwf_stream_destroy(s);
 }
 
 int main(void)
