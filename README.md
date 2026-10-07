@@ -1,4 +1,4 @@
-# tinypipewire
+# pipewire-flow
 
 A small C library that wraps PipeWire's `pw_stream` API behind a simpler,
 unified interface for capturing audio and video. It hides PipeWire's
@@ -86,7 +86,7 @@ Once the library is installed (`meson install -C build`), build against it
 with pkg-config:
 
 ```sh
-cc capture.c $(pkg-config --cflags --libs tinypipewire) -o capture
+cc capture.c $(pkg-config --cflags --libs pipewire-flow) -o capture
 ```
 
 Swap `TPW_DATA_AUDIO` for `TPW_DATA_VIDEO` and

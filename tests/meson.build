@@ -31,16 +31,16 @@ unit_tests = [
 # Whitebox tests call internal functions the shared library hides, so every
 # test links the library's own objects instead of the installed .so.
 src_inc = include_directories('../src')
-tinypipewire_objects = tinypipewire_lib.extract_all_objects(recursive: true)
-tinypipewire_internal_dep = declare_dependency(
+pipewire_flow_objects = pipewire_flow_lib.extract_all_objects(recursive: true)
+pipewire_flow_internal_dep = declare_dependency(
   include_directories: [tpw_inc, src_inc],
   dependencies: [pipewire_dep, dependency('threads')],
 )
 
 foreach name : unit_tests
   exe = executable(name, name + '.c',
-    objects: tinypipewire_objects,
-    dependencies: [tinypipewire_internal_dep],
+    objects: pipewire_flow_objects,
+    dependencies: [pipewire_flow_internal_dep],
   )
   test(name, exe)
 endforeach
@@ -61,8 +61,8 @@ hardware_tests = [
 
 foreach name : hardware_tests
   exe = executable(name, [name + '.c', 'tpw_test_hw_discover.c'],
-    objects: tinypipewire_objects,
-    dependencies: [tinypipewire_internal_dep],
+    objects: pipewire_flow_objects,
+    dependencies: [pipewire_flow_internal_dep],
   )
   # A camera is an exclusive device, so these must not run against each
   # other or the second one fails to link.
@@ -92,7 +92,7 @@ if python3_prog.found()
       args: [
         files('../.github/scripts/check_exported_symbols.py'),
         nm_prog.full_path(),
-        tinypipewire_lib,
+        pipewire_flow_lib,
         meson.project_source_root() / 'include' / 'tpw' / 'tpw_types.h',
         meson.project_source_root() / 'include' / 'tpw' / 'tpw_stream.h',
         meson.project_source_root() / 'include' / 'tpw' / 'tpw_filter.h',
