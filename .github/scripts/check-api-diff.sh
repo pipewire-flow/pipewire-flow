@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Warns (does not fail the build) when a public function in include/tpw/*.h
+# Warns (does not fail the build) when a public function in include/pwf/*.h
 # is removed or has its signature changed compared to the base branch.
 # Every public header is copied and preprocessed, so a header that another
 # one includes must be listed too; add new public headers to PUBLIC_HEADERS.
@@ -13,30 +13,30 @@ set -u
 
 base_ref="$1"
 summary_file="${2:-}"
-base_dir="$(mktemp -d)/tpw"
+base_dir="$(mktemp -d)/pwf"
 mkdir -p "$base_dir"
 
-PUBLIC_HEADERS="tpw_export.h tpw_types.h tpw_stream.h tpw_filter.h tpw_log.h"
+PUBLIC_HEADERS="pwf_export.h pwf_types.h pwf_stream.h pwf_filter.h pwf_log.h"
 
 for f in $PUBLIC_HEADERS; do
-    git show "$base_ref:include/tpw/$f" > "$base_dir/$f" 2>/dev/null
+    git show "$base_ref:include/pwf/$f" > "$base_dir/$f" 2>/dev/null
 done
 
 extract_signatures() {
     local include_dir="$1"
     for header in $PUBLIC_HEADERS; do
-        gcc -E -P -DTPW_API= -I "$include_dir" "$include_dir/tpw/$header" 2>/dev/null
+        gcc -E -P -DPWF_API= -I "$include_dir" "$include_dir/pwf/$header" 2>/dev/null
     done \
         | tr '\n' ' ' | tr -s ' ' \
         | sed 's/;/;\n/g' \
-        | grep -E 'tpw_[A-Za-z0-9_]+ *\(' \
+        | grep -E 'pwf_[A-Za-z0-9_]+ *\(' \
         | grep -vE '\(\*' \
         | grep -v '^ *typedef' \
         | sed 's/^ *//; s/ *$//'
 }
 
 func_name() {
-    grep -oP 'tpw_[A-Za-z0-9_]+(?=\()' <<< "$1" | head -1
+    grep -oP 'pwf_[A-Za-z0-9_]+(?=\()' <<< "$1" | head -1
 }
 
 declare -A base_sig head_sig

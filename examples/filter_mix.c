@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "tpw/tpw_filter.h"
+#include "pwf/pwf_filter.h"
 
 static volatile sig_atomic_t g_running = 1;
 
@@ -15,7 +15,7 @@ static void on_signal(int sig)
     g_running = 0;
 }
 
-static void on_error(tpw_filter_h filter, tpw_filter_port_h port, int error_code, void* user_data)
+static void on_error(pwf_filter_h filter, pwf_filter_port_h port, int error_code, void* user_data)
 {
     (void)filter;
     (void)port;
@@ -26,16 +26,16 @@ static void on_error(tpw_filter_h filter, tpw_filter_port_h port, int error_code
 /* Sums the two audio inputs sample-by-sample (with clipping) into the
  * single audio output; buffers[0]/[1] are inputs, buffers[2] is output,
  * matching the port-adding order in main(). */
-static void on_process(tpw_filter_h filter, tpw_filter_port_buffer* buffers, size_t n_buffers, void* user_data)
+static void on_process(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers, void* user_data)
 {
     (void)filter;
     (void)user_data;
     if (n_buffers < 3)
         return;
 
-    tpw_filter_port_buffer* in0 = &buffers[0];
-    tpw_filter_port_buffer* in1 = &buffers[1];
-    tpw_filter_port_buffer* out = &buffers[2];
+    pwf_filter_port_buffer* in0 = &buffers[0];
+    pwf_filter_port_buffer* in1 = &buffers[1];
+    pwf_filter_port_buffer* out = &buffers[2];
 
     printf("filter_mix: in0=%zu bytes in1=%zu bytes\n", in0->size, in1->size);
 
@@ -71,27 +71,27 @@ int main(void)
 {
     signal(SIGINT, on_signal);
 
-    tpw_filter_h filter = tpw_filter_create("tpw-filter-mix", on_process, NULL);
+    pwf_filter_h filter = pwf_filter_create("pwf-filter-mix", on_process, NULL);
     if (!filter) {
         fprintf(stderr, "failed to create filter (is PipeWire running?)\n");
         return 1;
     }
 
-    tpw_filter_set_error_cb(filter, on_error);
+    pwf_filter_set_error_cb(filter, on_error);
 
-    tpw_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
-    tpw_filter_port_h in0 = tpw_filter_add_audio_port(filter, TPW_FILTER_PORT_INPUT, &cfg);
-    tpw_filter_port_h in1 = tpw_filter_add_audio_port(filter, TPW_FILTER_PORT_INPUT, &cfg);
-    tpw_filter_port_h out = tpw_filter_add_audio_port(filter, TPW_FILTER_PORT_OUTPUT, &cfg);
+    pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
+    pwf_filter_port_h in0 = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT, &cfg);
+    pwf_filter_port_h in1 = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT, &cfg);
+    pwf_filter_port_h out = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_OUTPUT, &cfg);
     if (!in0 || !in1 || !out) {
         fprintf(stderr, "failed to add filter ports\n");
-        tpw_filter_destroy(filter);
+        pwf_filter_destroy(filter);
         return 1;
     }
 
-    if (tpw_filter_start(filter) != TPW_OK) {
+    if (pwf_filter_start(filter) != PWF_OK) {
         fprintf(stderr, "failed to start filter\n");
-        tpw_filter_destroy(filter);
+        pwf_filter_destroy(filter);
         return 1;
     }
 
@@ -99,7 +99,7 @@ int main(void)
     while (g_running)
         sleep(1);
 
-    tpw_filter_stop(filter, false);
-    tpw_filter_destroy(filter);
+    pwf_filter_stop(filter, false);
+    pwf_filter_destroy(filter);
     return 0;
 }

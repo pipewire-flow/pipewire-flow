@@ -7,8 +7,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "tpw_filter_internal.h"
-#include "tpw_test.h"
+#include "pwf_filter_internal.h"
+#include "pwf_test.h"
 
 #define PUSHES 400
 #define SLOW_CALLBACK_US 3000
@@ -29,18 +29,18 @@ static bool wait_for(const atomic_uint* counter, unsigned target)
 static atomic_uint g_events_seen;
 static atomic_uint g_events_misordered;
 
-static void event_cb(tpw_filter_h filter, tpw_filter_port_buffer* buffers, size_t n, void* user_data)
+static void event_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     (void)filter;
     (void)n;
     (void)user_data;
 
-    tpw_filter_port_h in = buffers[0].port;
-    size_t count = tpw_filter_port_get_event_count(in);
+    pwf_filter_port_h in = buffers[0].port;
+    size_t count = pwf_filter_port_get_event_count(in);
     for (size_t i = 0; i < count; i++) {
-        tpw_event ev;
+        pwf_event ev;
         uint32_t value = 0;
-        if (tpw_filter_port_get_event(in, i, &ev) == TPW_OK && ev.size == sizeof(value))
+        if (pwf_filter_port_get_event(in, i, &ev) == PWF_OK && ev.size == sizeof(value))
             memcpy(&value, ev.data, sizeof(value));
         /* A lost event shifts every later value off its expected position. */
         if (value != atomic_load(&g_events_seen))
@@ -52,27 +52,27 @@ static void event_cb(tpw_filter_h filter, tpw_filter_port_buffer* buffers, size_
 
 static void test_no_event_is_lost(void)
 {
-    tpw_filter_h filter = tpw_filter_create("tpw-test-push-race-events", event_cb, NULL);
-    TPW_ASSERT(filter != NULL);
-    tpw_filter_port_h in = tpw_filter_add_event_port(filter, TPW_FILTER_PORT_INPUT);
-    TPW_ASSERT(in != NULL);
-    TPW_ASSERT_EQ(tpw_filter_start(filter), TPW_OK);
+    pwf_filter_h filter = pwf_filter_create("pwf-test-push-race-events", event_cb, NULL);
+    PWF_ASSERT(filter != NULL);
+    pwf_filter_port_h in = pwf_filter_add_event_port(filter, PWF_FILTER_PORT_INPUT);
+    PWF_ASSERT(in != NULL);
+    PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
 
     for (uint32_t i = 0; i < PUSHES; i++) {
-        tpw_event ev = { .offset = 0, .kind = TPW_EVENT_MIDI, .key = NULL, .data = &i, .size = sizeof(i) };
-        TPW_ASSERT_EQ(tpw_filter_port_push_event(in, &ev), TPW_OK);
+        pwf_event ev = { .offset = 0, .kind = PWF_EVENT_MIDI, .key = NULL, .data = &i, .size = sizeof(i) };
+        PWF_ASSERT_EQ(pwf_filter_port_push_event(in, &ev), PWF_OK);
         usleep(300 + (i % 7) * 300); /* The spacing lands pushes across the whole cycle. */
     }
 
     bool all_seen = wait_for(&g_events_seen, PUSHES);
-    tpw_filter_stop(filter, false);
-    tpw_filter_destroy(filter);
+    pwf_filter_stop(filter, false);
+    pwf_filter_destroy(filter);
 
     unsigned seen = atomic_load(&g_events_seen);
     unsigned misordered = atomic_load(&g_events_misordered);
-    TPW_ASSERT(all_seen);
-    TPW_ASSERT_EQ(seen, (unsigned)PUSHES);
-    TPW_ASSERT_EQ(misordered, 0u);
+    PWF_ASSERT(all_seen);
+    PWF_ASSERT_EQ(seen, (unsigned)PUSHES);
+    PWF_ASSERT_EQ(misordered, 0u);
 }
 
 /* A delivered buffer does not change while the callback reads it. */
@@ -86,13 +86,13 @@ static size_t size_for(uint8_t value)
     return 16 + (size_t)value * 8;
 }
 
-static void data_cb(tpw_filter_h filter, tpw_filter_port_buffer* buffers, size_t n, void* user_data)
+static void data_cb(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
     (void)filter;
     (void)n;
     (void)user_data;
 
-    const tpw_filter_port_buffer* b = &buffers[0];
+    const pwf_filter_port_buffer* b = &buffers[0];
     if (!b->fresh || !b->data || b->size == 0) {
         usleep(SLOW_CALLBACK_US);
         return;
@@ -112,28 +112,28 @@ static void data_cb(tpw_filter_h filter, tpw_filter_port_buffer* buffers, size_t
 
 static void test_delivered_data_is_stable(void)
 {
-    tpw_filter_h filter = tpw_filter_create("tpw-test-push-race-data", data_cb, NULL);
-    TPW_ASSERT(filter != NULL);
-    tpw_filter_port_h in = tpw_filter_add_signal_port(filter, TPW_FILTER_PORT_INPUT);
-    TPW_ASSERT(in != NULL);
-    TPW_ASSERT_EQ(tpw_filter_start(filter), TPW_OK);
+    pwf_filter_h filter = pwf_filter_create("pwf-test-push-race-data", data_cb, NULL);
+    PWF_ASSERT(filter != NULL);
+    pwf_filter_port_h in = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
+    PWF_ASSERT(in != NULL);
+    PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
 
     uint8_t buf[16 + 255 * 8];
     for (unsigned i = 0; i < PUSHES; i++) {
         /* Sizes vary, so the push side regrows its buffer while capacity catches up. */
         uint8_t value = (uint8_t)(1 + (i * 37) % 255);
         memset(buf, value, size_for(value));
-        TPW_ASSERT_EQ(tpw_filter_push_port_data(filter, in, buf, size_for(value), i), TPW_OK);
+        PWF_ASSERT_EQ(pwf_filter_push_port_data(filter, in, buf, size_for(value), i), PWF_OK);
         usleep(300 + (i % 7) * 300);
     }
 
     bool delivered = wait_for(&g_data_fresh, 1);
-    tpw_filter_stop(filter, false);
-    tpw_filter_destroy(filter);
+    pwf_filter_stop(filter, false);
+    pwf_filter_destroy(filter);
 
     unsigned torn = atomic_load(&g_data_torn);
-    TPW_ASSERT(delivered);
-    TPW_ASSERT_EQ(torn, 0u);
+    PWF_ASSERT(delivered);
+    PWF_ASSERT_EQ(torn, 0u);
 }
 
 int main(void)

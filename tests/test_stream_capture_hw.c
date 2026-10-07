@@ -4,7 +4,7 @@
  * present. Captures each with plain (non-DMABUF) buffers and checks the
  * delivered data itself — the gap test_stream_dmabuf_hw.c (DMABUF-only) and
  * test_stream_lifecycle.c (discards buf) both leave uncovered. Audio and
- * video are two independent tpw_stream_h handles, since one handle is fixed
+ * video are two independent pwf_stream_h handles, since one handle is fixed
  * to a single type at creation. */
 
 #include <stdbool.h>
@@ -12,10 +12,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <tpw/tpw_stream.h>
+#include <pwf/pwf_stream.h>
 
-#include "tpw_test.h"
-#include "tpw_test_hw_discover.h"
+#include "pwf_test.h"
+#include "pwf_test_hw_discover.h"
 
 #define TEST_SKIP 77
 #define RUN_USEC (1500 * 1000)
@@ -28,7 +28,7 @@ struct counters {
     int error_code;
 };
 
-static void on_data(tpw_stream_h stream, const tpw_stream_buffer* buf, void* user_data)
+static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     struct counters* c = user_data;
@@ -41,7 +41,7 @@ static void on_data(tpw_stream_h stream, const tpw_stream_buffer* buf, void* use
         c->saw_pts++;
 }
 
-static void on_error(tpw_stream_h stream, int error_code, void* user_data)
+static void on_error(pwf_stream_h stream, int error_code, void* user_data)
 {
     (void)stream;
     struct counters* c = user_data;
@@ -54,61 +54,61 @@ static void on_error(tpw_stream_h stream, int error_code, void* user_data)
 static void run_video_capture(const char* camera)
 {
     struct counters c = { 0 };
-    tpw_stream_h s = tpw_stream_create(TPW_DATA_VIDEO, on_data, &c);
-    TPW_ASSERT(s != NULL);
-    TPW_ASSERT_EQ(tpw_stream_set_error_cb(s, on_error), TPW_OK);
-    TPW_ASSERT_EQ(tpw_stream_set_autoconnect(s, false), TPW_OK);
+    pwf_stream_h s = pwf_stream_create(PWF_DATA_VIDEO, on_data, &c);
+    PWF_ASSERT(s != NULL);
+    PWF_ASSERT_EQ(pwf_stream_set_error_cb(s, on_error), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_OK);
 
-    tpw_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
-    TPW_ASSERT_EQ(tpw_stream_set_video_config(s, &cfg), TPW_OK);
-    TPW_ASSERT_EQ(tpw_stream_start(s), TPW_OK);
-    TPW_ASSERT_EQ(tpw_stream_link(s, camera), TPW_OK);
+    pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
+    PWF_ASSERT_EQ(pwf_stream_set_video_config(s, &cfg), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_start(s), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_link(s, camera), PWF_OK);
 
     usleep(RUN_USEC);
-    TPW_ASSERT_EQ(tpw_stream_stop(s, false), TPW_OK);
-    tpw_stream_destroy(s);
+    PWF_ASSERT_EQ(pwf_stream_stop(s, false), PWF_OK);
+    pwf_stream_destroy(s);
 
     printf("video: frames=%u non_null_data=%u pts_seen=%u\n", c.frames, c.saw_non_null_data, c.saw_pts);
 
-    TPW_ASSERT(c.frames > 0);
-    TPW_ASSERT_EQ(c.saw_non_null_data, c.frames);
-    TPW_ASSERT_EQ(c.saw_zero_size, 0u);
-    TPW_ASSERT(c.saw_pts > 0);
-    TPW_ASSERT_EQ(c.error_code, 0);
+    PWF_ASSERT(c.frames > 0);
+    PWF_ASSERT_EQ(c.saw_non_null_data, c.frames);
+    PWF_ASSERT_EQ(c.saw_zero_size, 0u);
+    PWF_ASSERT(c.saw_pts > 0);
+    PWF_ASSERT_EQ(c.error_code, 0);
 }
 
-/* Captures RUN_USEC of raw audio from `mic`. Requests mono: tpw_stream_link()
+/* Captures RUN_USEC of raw audio from `mic`. Requests mono: pwf_stream_link()
  * rejects a target with fewer channels than requested, and a capture-only
  * mic is commonly mono (surplus channels on a stereo device are simply left
- * unconnected, per tpw_stream_link()'s docs). pts is not asserted: PipeWire's
+ * unconnected, per pwf_stream_link()'s docs). pts is not asserted: PipeWire's
  * audioconvert/audioadapter often drops the capture timestamp when the
  * requested format isn't the device's native one — a known upstream gap,
  * not something this test can control. */
 static void run_audio_capture(const char* mic)
 {
     struct counters c = { 0 };
-    tpw_stream_h s = tpw_stream_create(TPW_DATA_AUDIO, on_data, &c);
-    TPW_ASSERT(s != NULL);
-    TPW_ASSERT_EQ(tpw_stream_set_error_cb(s, on_error), TPW_OK);
-    TPW_ASSERT_EQ(tpw_stream_set_autoconnect(s, false), TPW_OK);
+    pwf_stream_h s = pwf_stream_create(PWF_DATA_AUDIO, on_data, &c);
+    PWF_ASSERT(s != NULL);
+    PWF_ASSERT_EQ(pwf_stream_set_error_cb(s, on_error), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_OK);
 
-    tpw_audio_config cfg = { .sample_rate = 48000, .channels = 1 };
-    TPW_ASSERT_EQ(tpw_stream_set_audio_config(s, &cfg), TPW_OK);
-    TPW_ASSERT_EQ(tpw_stream_start(s), TPW_OK);
-    TPW_ASSERT_EQ(tpw_stream_link(s, mic), TPW_OK);
+    pwf_audio_config cfg = { .sample_rate = 48000, .channels = 1 };
+    PWF_ASSERT_EQ(pwf_stream_set_audio_config(s, &cfg), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_start(s), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_link(s, mic), PWF_OK);
 
     usleep(RUN_USEC);
     /* Draining a capture stream waits for already-queued frames to reach
      * this callback too, not just a playback stream's device. */
-    TPW_ASSERT_EQ(tpw_stream_stop(s, true), TPW_OK);
-    tpw_stream_destroy(s);
+    PWF_ASSERT_EQ(pwf_stream_stop(s, true), PWF_OK);
+    pwf_stream_destroy(s);
 
     printf("audio: frames=%u non_null_data=%u pts_seen=%u\n", c.frames, c.saw_non_null_data, c.saw_pts);
 
-    TPW_ASSERT(c.frames > 0);
-    TPW_ASSERT_EQ(c.saw_non_null_data, c.frames);
-    TPW_ASSERT_EQ(c.saw_zero_size, 0u);
-    TPW_ASSERT_EQ(c.error_code, 0);
+    PWF_ASSERT(c.frames > 0);
+    PWF_ASSERT_EQ(c.saw_non_null_data, c.frames);
+    PWF_ASSERT_EQ(c.saw_zero_size, 0u);
+    PWF_ASSERT_EQ(c.error_code, 0);
 }
 
 struct mjpg_counters {
@@ -120,7 +120,7 @@ struct mjpg_counters {
     int error_code;
 };
 
-static void on_mjpg_data(tpw_stream_h stream, const tpw_stream_buffer* buf, void* user_data)
+static void on_mjpg_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream;
     struct mjpg_counters* c = user_data;
@@ -135,7 +135,7 @@ static void on_mjpg_data(tpw_stream_h stream, const tpw_stream_buffer* buf, void
         c->saw_different_size = true;
 }
 
-static void on_mjpg_error(tpw_stream_h stream, int error_code, void* user_data)
+static void on_mjpg_error(pwf_stream_h stream, int error_code, void* user_data)
 {
     (void)stream;
     struct mjpg_counters* c = user_data;
@@ -147,24 +147,24 @@ static void on_mjpg_error(tpw_stream_h stream, int error_code, void* user_data)
 static void run_mjpg_capture_if_supported(const char* camera)
 {
     struct mjpg_counters c = { 0 };
-    tpw_stream_h s = tpw_stream_create(TPW_DATA_VIDEO, on_mjpg_data, &c);
-    TPW_ASSERT(s != NULL);
-    TPW_ASSERT_EQ(tpw_stream_set_error_cb(s, on_mjpg_error), TPW_OK);
-    TPW_ASSERT_EQ(tpw_stream_set_autoconnect(s, false), TPW_OK);
+    pwf_stream_h s = pwf_stream_create(PWF_DATA_VIDEO, on_mjpg_data, &c);
+    PWF_ASSERT(s != NULL);
+    PWF_ASSERT_EQ(pwf_stream_set_error_cb(s, on_mjpg_error), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_OK);
 
-    tpw_video_config cfg = { .width = 1280, .height = 720, .pixel_format = "MJPG", .fps = 30 };
-    TPW_ASSERT_EQ(tpw_stream_set_video_config(s, &cfg), TPW_OK);
-    TPW_ASSERT_EQ(tpw_stream_start(s), TPW_OK);
+    pwf_video_config cfg = { .width = 1280, .height = 720, .pixel_format = "MJPG", .fps = 30 };
+    PWF_ASSERT_EQ(pwf_stream_set_video_config(s, &cfg), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_start(s), PWF_OK);
 
-    if (tpw_stream_link(s, camera) != TPW_OK) {
+    if (pwf_stream_link(s, camera) != PWF_OK) {
         printf("MJPG: camera rejected the request, skipping\n");
-        tpw_stream_destroy(s);
+        pwf_stream_destroy(s);
         return;
     }
 
     usleep(RUN_USEC);
-    TPW_ASSERT_EQ(tpw_stream_stop(s, false), TPW_OK);
-    tpw_stream_destroy(s);
+    PWF_ASSERT_EQ(pwf_stream_stop(s, false), PWF_OK);
+    pwf_stream_destroy(s);
 
     printf("MJPG: frames=%u non_null_data=%u differing_sizes=%s\n", c.frames, c.saw_non_null_data,
            c.saw_different_size ? "yes" : "no");
@@ -174,18 +174,18 @@ static void run_mjpg_capture_if_supported(const char* camera)
         return;
     }
 
-    TPW_ASSERT_EQ(c.saw_non_null_data, c.frames);
-    TPW_ASSERT_EQ(c.saw_zero_size, 0u);
-    TPW_ASSERT(c.saw_different_size);
-    TPW_ASSERT_EQ(c.error_code, 0);
+    PWF_ASSERT_EQ(c.saw_non_null_data, c.frames);
+    PWF_ASSERT_EQ(c.saw_zero_size, 0u);
+    PWF_ASSERT(c.saw_different_size);
+    PWF_ASSERT_EQ(c.error_code, 0);
 }
 
 int main(void)
 {
     char camera[256];
     char mic[256];
-    bool have_camera = tpw_test_find_node("Video/Source", camera, sizeof(camera));
-    bool have_mic = tpw_test_find_node("Audio/Source", mic, sizeof(mic));
+    bool have_camera = pwf_test_find_node("Video/Source", camera, sizeof(camera));
+    bool have_mic = pwf_test_find_node("Audio/Source", mic, sizeof(mic));
 
     if (!have_camera && !have_mic) {
         printf("no camera or microphone present, skipping\n");

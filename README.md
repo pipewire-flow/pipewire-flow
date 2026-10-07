@@ -46,13 +46,13 @@ Capture from the default microphone until Ctrl+C:
 #include <stdio.h>
 #include <unistd.h>
 
-#include <tpw/tpw_stream.h>
+#include <pwf/pwf_stream.h>
 
 static volatile sig_atomic_t running = 1;
 
 static void on_signal(int sig) { (void)sig; running = 0; }
 
-static void on_data(tpw_stream_h stream, const tpw_stream_buffer* buf, void* user_data)
+static void on_data(pwf_stream_h stream, const pwf_stream_buffer* buf, void* user_data)
 {
     (void)stream; (void)user_data;
     printf("%zu bytes (pts=%lld ns)\n", buf->size, (long long)buf->pts);
@@ -62,22 +62,22 @@ int main(void)
 {
     signal(SIGINT, on_signal);
 
-    tpw_stream_h s = tpw_stream_create(TPW_DATA_AUDIO, on_data, NULL);
+    pwf_stream_h s = pwf_stream_create(PWF_DATA_AUDIO, on_data, NULL);
     if (!s)
         return 1;
 
-    tpw_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
-    if (tpw_stream_set_audio_config(s, &cfg) != TPW_OK ||
-        tpw_stream_start(s) != TPW_OK) {
-        tpw_stream_destroy(s);
+    pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
+    if (pwf_stream_set_audio_config(s, &cfg) != PWF_OK ||
+        pwf_stream_start(s) != PWF_OK) {
+        pwf_stream_destroy(s);
         return 1;
     }
 
     while (running)
         sleep(1);
 
-    tpw_stream_stop(s, false);
-    tpw_stream_destroy(s);
+    pwf_stream_stop(s, false);
+    pwf_stream_destroy(s);
     return 0;
 }
 ```
@@ -89,8 +89,8 @@ with pkg-config:
 cc capture.c $(pkg-config --cflags --libs pipewire-flow) -o capture
 ```
 
-Swap `TPW_DATA_AUDIO` for `TPW_DATA_VIDEO` and
-`tpw_stream_set_audio_config()` for `tpw_stream_set_video_config()` to
+Swap `PWF_DATA_AUDIO` for `PWF_DATA_VIDEO` and
+`pwf_stream_set_audio_config()` for `pwf_stream_set_video_config()` to
 capture from a camera instead; everything else is the same.
 
 ## API
@@ -99,15 +99,15 @@ Four headers are installed, one per area plus the types the first two share:
 
 | Header | What it covers | Reference |
 | --- | --- | --- |
-| `tpw/tpw_types.h` | What a stream or port carries, how a call failed, and the audio, video and DMABUF descriptions | [docs/streams.md](docs/streams.md#error-codes) |
-| `tpw/tpw_stream.h` | Audio and video capture, audio playback, choosing a source, manual graph wiring, DMABUF capture | [docs/streams.md](docs/streams.md) |
-| `tpw/tpw_filter.h` | Multi-port filters, signal and event ports, DMABUF import and buffer hold, linking a port to a real device | [docs/filters.md](docs/filters.md) |
-| `tpw/tpw_log.h` | Redirecting or filtering the library's diagnostics | [docs/logging.md](docs/logging.md) |
+| `pwf/pwf_types.h` | What a stream or port carries, how a call failed, and the audio, video and DMABUF descriptions | [docs/streams.md](docs/streams.md#error-codes) |
+| `pwf/pwf_stream.h` | Audio and video capture, audio playback, choosing a source, manual graph wiring, DMABUF capture | [docs/streams.md](docs/streams.md) |
+| `pwf/pwf_filter.h` | Multi-port filters, signal and event ports, DMABUF import and buffer hold, linking a port to a real device | [docs/filters.md](docs/filters.md) |
+| `pwf/pwf_log.h` | Redirecting or filtering the library's diagnostics | [docs/logging.md](docs/logging.md) |
 
 Some highlights of what lives behind them:
 
 - **Config structs, not long signatures.** Formats are passed as
-  `tpw_audio_config`/`tpw_video_config`, so new fields never change a call.
+  `pwf_audio_config`/`pwf_video_config`, so new fields never change a call.
 - **Timestamps.** Every capture buffer carries a `pts` from the driver
   clock; a playback buffer's `pts` says when its first sample will be heard.
 - **Zero-copy.** Video capture streams and filter video input ports can both
@@ -115,7 +115,7 @@ Some highlights of what lives behind them:
 - **Your own graph.** Streams and filter ports can skip the session manager
   and link themselves to a named device.
 - **Ask before you configure.** A camera reports the sizes and frame rates it
-  actually has, in a form that goes straight into a `tpw_video_config`. Audio
+  actually has, in a form that goes straight into a `pwf_video_config`. Audio
   has no such call on purpose — PipeWire converts sample formats, rates and
   channel counts for a stream, so whatever you ask for works.
 
@@ -131,7 +131,7 @@ Each builds to `./build/examples/`:
 | [`video_capture_mjpeg`](examples/video_capture_mjpeg.c) | Capture MJPEG from the default camera and print each frame's (varying) size |
 | [`audio_playback`](examples/audio_playback.c) | Play a generated tone to the default output device, printing when the next samples will be heard. Takes an optional sink name from `wpctl status` |
 | [`stream_manual_link`](examples/stream_manual_link.c) | Wire a capture stream to a named device with no session manager involved, pausing so the graph can be inspected before and after. Usage: `stream_manual_link <device> [other-device]`, where the second device re-targets the stream |
-| [`list_targets`](examples/list_targets.c) | Print every target `tpw_stream_set_target()` would accept, for audio sources, video sources, and audio sinks — with each camera's supported formats and frame rates |
+| [`list_targets`](examples/list_targets.c) | Print every target `pwf_stream_set_target()` would accept, for audio sources, video sources, and audio sinks — with each camera's supported formats and frame rates |
 | [`filter_mix`](examples/filter_mix.c) | Mix two audio input ports into one audio output port |
 | [`filter_signal_port`](examples/filter_signal_port.c) | Feed a synthetic signal port alongside an audio port into one filter |
 | [`filter_event_port`](examples/filter_event_port.c) | Echo events from an event input port back out through an event output port |
@@ -142,34 +142,34 @@ Node and device names come from `wpctl status` or `pw-cli ls Node`.
 
 ## Utilities
 
-`utils/tpw_record.c` records the default (or a chosen) audio or video
+`utils/pwf_record.c` records the default (or a chosen) audio or video
 source to a file:
 
 ```sh
-./build/utils/tpw_record -o out.wav                      # audio, default source, until Ctrl+C
-./build/utils/tpw_record -o out.pcm -f pcm -d 10          # raw PCM, 10 seconds
-./build/utils/tpw_record -o out.wav --device alsa_input.usb-...  # pick a source (see `wpctl status`)
-./build/utils/tpw_record -o out.wav --sample-rate 44100 --channels 1 --bits 24 -d 5  # 44.1kHz mono, 24-bit
+./build/utils/pwf_record -o out.wav                      # audio, default source, until Ctrl+C
+./build/utils/pwf_record -o out.pcm -f pcm -d 10          # raw PCM, 10 seconds
+./build/utils/pwf_record -o out.wav --device alsa_input.usb-...  # pick a source (see `wpctl status`)
+./build/utils/pwf_record -o out.wav --sample-rate 44100 --channels 1 --bits 24 -d 5  # 44.1kHz mono, 24-bit
 
-./build/utils/tpw_record -o out.raw -t video -d 5         # video, raw I420 frames, 5 seconds
-./build/utils/tpw_record -o out.y4m -t video -f y4m --fps 30 -d 5  # playable YUV4MPEG2
-./build/utils/tpw_record -o out.raw -t video --width 1280 --height 720 -d 5  # 720p raw I420
-./build/utils/tpw_record -o out.raw -t video --device v4l2_input.usb-... -d 5  # pick a camera
+./build/utils/pwf_record -o out.raw -t video -d 5         # video, raw I420 frames, 5 seconds
+./build/utils/pwf_record -o out.y4m -t video -f y4m --fps 30 -d 5  # playable YUV4MPEG2
+./build/utils/pwf_record -o out.raw -t video --width 1280 --height 720 -d 5  # 720p raw I420
+./build/utils/pwf_record -o out.raw -t video --device v4l2_input.usb-... -d 5  # pick a camera
 ```
 
-`utils/tpw_stream_loopback.c` loops captured audio straight to the default
+`utils/pwf_stream_loopback.c` loops captured audio straight to the default
 output device and/or logs data callbacks from one or more video capture
-streams, using only the `tpw_stream` API. Video streams only log for now;
+streams, using only the `pwf_stream` API. Video streams only log for now;
 rendering is a future addition once a UI backend option exists:
 
 ```sh
-./build/utils/tpw_stream_loopback                                    # mic straight to the default output, until Ctrl+C
-./build/utils/tpw_stream_loopback --device alsa_input.usb-... -d 10  # pick a source, 10 seconds
-./build/utils/tpw_stream_loopback --sample-rate 44100 --channels 1 --bits 24  # 44.1kHz mono, 24-bit
+./build/utils/pwf_stream_loopback                                    # mic straight to the default output, until Ctrl+C
+./build/utils/pwf_stream_loopback --device alsa_input.usb-... -d 10  # pick a source, 10 seconds
+./build/utils/pwf_stream_loopback --sample-rate 44100 --channels 1 --bits 24  # 44.1kHz mono, 24-bit
 
-./build/utils/tpw_stream_loopback --no-audio --video-streams 2 -d 5  # log two default-camera streams, no audio
-./build/utils/tpw_stream_loopback --video-streams 1 --dmabuf --fps 30 --width 1280 --height 720  # DMABUF, 720p30
-./build/utils/tpw_stream_loopback --video-streams 1 --pixel-format MJPG  # ask the camera for MJPG instead
+./build/utils/pwf_stream_loopback --no-audio --video-streams 2 -d 5  # log two default-camera streams, no audio
+./build/utils/pwf_stream_loopback --video-streams 1 --dmabuf --fps 30 --width 1280 --height 720  # DMABUF, 720p30
+./build/utils/pwf_stream_loopback --video-streams 1 --pixel-format MJPG  # ask the camera for MJPG instead
 ```
 
 The pixel format is negotiated with the camera as-is, with no conversion in

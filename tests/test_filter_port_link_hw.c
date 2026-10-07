@@ -9,10 +9,10 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <tpw/tpw_filter.h>
+#include <pwf/pwf_filter.h>
 
-#include "tpw_test.h"
-#include "tpw_test_hw_discover.h"
+#include "pwf_test.h"
+#include "pwf_test_hw_discover.h"
 
 #define TEST_SKIP 77
 
@@ -29,15 +29,15 @@ struct counters {
     bool seen_fresh;
 };
 
-static void on_process(tpw_filter_h filter, tpw_filter_port_buffer* buffers, size_t n_buffers, void* user_data)
+static void on_process(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers, void* user_data)
 {
     (void)filter;
     struct counters* c = user_data;
     c->cycles++;
 
     for (size_t i = 0; i < n_buffers; i++) {
-        tpw_dmabuf_plane plane;
-        if (tpw_filter_port_get_dmabuf_planes(&buffers[i], &plane, 1) > 0) {
+        pwf_dmabuf_plane plane;
+        if (pwf_filter_port_get_dmabuf_planes(&buffers[i], &plane, 1) > 0) {
             c->dmabuf_frames++;
             c->last_fd = plane.fd;
             if (buffers[i].fresh)
@@ -52,7 +52,7 @@ static void on_process(tpw_filter_h filter, tpw_filter_port_buffer* buffers, siz
 }
 
 /* Counts mapped buffers, for the shared-source test's plain ports. */
-static void on_process_count(tpw_filter_h filter, tpw_filter_port_buffer* buffers, size_t n_buffers,
+static void on_process_count(pwf_filter_h filter, pwf_filter_port_buffer* buffers, size_t n_buffers,
                               void* user_data)
 {
     (void)filter;
@@ -71,33 +71,33 @@ static void test_shared_source(const char* target, bool video)
 {
     enum { N = 3 };
     unsigned received[N] = { 0 };
-    tpw_filter_h filter[N];
-    tpw_filter_port_h port[N];
-    tpw_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
+    pwf_filter_h filter[N];
+    pwf_filter_port_h port[N];
+    pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
 
     for (int i = 0; i < N; i++) {
-        filter[i] = tpw_filter_create("tpw-hw-shared", on_process_count, &received[i]);
-        TPW_ASSERT(filter[i] != NULL);
-        port[i] = video ? tpw_filter_add_video_port(filter[i], TPW_FILTER_PORT_INPUT, &cfg)
-                        : tpw_filter_add_signal_port(filter[i], TPW_FILTER_PORT_INPUT);
-        TPW_ASSERT(port[i] != NULL);
-        TPW_ASSERT_EQ(tpw_filter_start(filter[i]), TPW_OK);
+        filter[i] = pwf_filter_create("pwf-hw-shared", on_process_count, &received[i]);
+        PWF_ASSERT(filter[i] != NULL);
+        port[i] = video ? pwf_filter_add_video_port(filter[i], PWF_FILTER_PORT_INPUT, &cfg)
+                        : pwf_filter_add_signal_port(filter[i], PWF_FILTER_PORT_INPUT);
+        PWF_ASSERT(port[i] != NULL);
+        PWF_ASSERT_EQ(pwf_filter_start(filter[i]), PWF_OK);
     }
 
     for (int i = 0; i < N; i++) {
-        int res = tpw_filter_port_link(port[i], target);
+        int res = pwf_filter_port_link(port[i], target);
         printf("  shared link %d -> '%s': %d\n", i, target, res);
-        TPW_ASSERT_EQ(res, TPW_OK);
+        PWF_ASSERT_EQ(res, PWF_OK);
     }
 
     usleep(RUN_USEC);
 
     printf("  shared buffers: %u / %u / %u\n", received[0], received[1], received[2]);
     for (int i = 0; i < N; i++)
-        TPW_ASSERT(received[i] > 0);
+        PWF_ASSERT(received[i] > 0);
 
     for (int i = 0; i < N; i++)
-        tpw_filter_destroy(filter[i]);
+        pwf_filter_destroy(filter[i]);
 }
 
 /* Links a camera to a DMABUF video port and checks frames really flow. A
@@ -106,32 +106,32 @@ static void test_shared_source(const char* target, bool video)
 static void test_video_link(const char* camera, const char* mic)
 {
     struct counters c = { .last_fd = -1 };
-    tpw_filter_h filter = tpw_filter_create("tpw-hw-video", on_process, &c);
-    TPW_ASSERT(filter != NULL);
+    pwf_filter_h filter = pwf_filter_create("pwf-hw-video", on_process, &c);
+    PWF_ASSERT(filter != NULL);
 
-    tpw_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
-    tpw_filter_port_opts opts = { .memory = TPW_PORT_MEMORY_DMABUF };
-    tpw_filter_port_h video_in = tpw_filter_add_video_port_ex(filter, TPW_FILTER_PORT_INPUT, &cfg, &opts);
-    TPW_ASSERT(video_in != NULL);
-    TPW_ASSERT_EQ(tpw_filter_port_set_hold(video_in, true), TPW_OK);
+    pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
+    pwf_filter_port_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    pwf_filter_port_h video_in = pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &cfg, &opts);
+    PWF_ASSERT(video_in != NULL);
+    PWF_ASSERT_EQ(pwf_filter_port_set_hold(video_in, true), PWF_OK);
 
-    tpw_filter_port_h sig_in = mic ? tpw_filter_add_signal_port(filter, TPW_FILTER_PORT_INPUT) : NULL;
-    TPW_ASSERT(!mic || sig_in != NULL);
-    TPW_ASSERT_EQ(tpw_filter_start(filter), TPW_OK);
+    pwf_filter_port_h sig_in = mic ? pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT) : NULL;
+    PWF_ASSERT(!mic || sig_in != NULL);
+    PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
 
     if (sig_in)
-        TPW_ASSERT_EQ(tpw_filter_port_link(sig_in, mic), TPW_OK);
+        PWF_ASSERT_EQ(pwf_filter_port_link(sig_in, mic), PWF_OK);
 
-    int res = tpw_filter_port_link(video_in, camera);
+    int res = pwf_filter_port_link(video_in, camera);
     printf("  link video -> '%s': %d\n", camera, res);
-    TPW_ASSERT_EQ(res, TPW_OK);
+    PWF_ASSERT_EQ(res, PWF_OK);
 
     /* Re-linking an already-linked port is rejected, and unlinking makes
      * the port reusable. */
-    TPW_ASSERT_EQ(tpw_filter_port_link(video_in, camera), TPW_ERR_INVALID_ARG);
-    TPW_ASSERT_EQ(tpw_filter_port_unlink(video_in), TPW_OK);
-    TPW_ASSERT_EQ(tpw_filter_port_unlink(video_in), TPW_ERR_NOT_CONFIGURED);
-    TPW_ASSERT_EQ(tpw_filter_port_link(video_in, camera), TPW_OK);
+    PWF_ASSERT_EQ(pwf_filter_port_link(video_in, camera), PWF_ERR_INVALID_ARG);
+    PWF_ASSERT_EQ(pwf_filter_port_unlink(video_in), PWF_OK);
+    PWF_ASSERT_EQ(pwf_filter_port_unlink(video_in), PWF_ERR_NOT_CONFIGURED);
+    PWF_ASSERT_EQ(pwf_filter_port_link(video_in, camera), PWF_OK);
 
     usleep(RUN_USEC);
 
@@ -139,22 +139,22 @@ static void test_video_link(const char* camera, const char* mic)
            c.last_fd);
     if (c.dmabuf_frames > 0) {
         /* A frame arrived, so it must carry a usable descriptor. */
-        TPW_ASSERT(c.last_fd >= 0);
-        TPW_ASSERT(c.seen_fresh);
+        PWF_ASSERT(c.last_fd >= 0);
+        PWF_ASSERT(c.seen_fresh);
         /* With audio driving the graph, most cycles fall between camera
          * frames and must re-present the held one. */
         if (sig_in)
-            TPW_ASSERT(c.held_cycles > 0);
+            PWF_ASSERT(c.held_cycles > 0);
     } else {
         /* The link is up, but this camera and format did not settle on
          * DMABUF. A port advertising DMABUF only is strict by design. */
         printf("  note: link established but no DMABUF frames negotiated\n");
     }
 
-    tpw_filter_stop(filter, false);
+    pwf_filter_stop(filter, false);
     /* stop() releases links on its own. */
-    TPW_ASSERT_EQ(tpw_filter_port_unlink(video_in), TPW_ERR_NOT_CONFIGURED);
-    tpw_filter_destroy(filter);
+    PWF_ASSERT_EQ(pwf_filter_port_unlink(video_in), PWF_ERR_NOT_CONFIGURED);
+    pwf_filter_destroy(filter);
 }
 
 /* Links a microphone to a signal port (audio/dsp), which is the port kind
@@ -162,26 +162,26 @@ static void test_video_link(const char* camera, const char* mic)
 static void test_audio_link(const char* mic)
 {
     struct counters c = { .last_fd = -1 };
-    tpw_filter_h filter = tpw_filter_create("tpw-hw-audio", on_process, &c);
-    TPW_ASSERT(filter != NULL);
+    pwf_filter_h filter = pwf_filter_create("pwf-hw-audio", on_process, &c);
+    PWF_ASSERT(filter != NULL);
 
-    tpw_filter_port_h sig_in = tpw_filter_add_signal_port(filter, TPW_FILTER_PORT_INPUT);
-    TPW_ASSERT(sig_in != NULL);
-    TPW_ASSERT_EQ(tpw_filter_start(filter), TPW_OK);
+    pwf_filter_port_h sig_in = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
+    PWF_ASSERT(sig_in != NULL);
+    PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
 
-    int res = tpw_filter_port_link(sig_in, mic);
+    int res = pwf_filter_port_link(sig_in, mic);
     printf("  link signal -> '%s': %d\n", mic, res);
-    TPW_ASSERT_EQ(res, TPW_OK);
+    PWF_ASSERT_EQ(res, PWF_OK);
 
     usleep(RUN_USEC);
 
     printf("  cycles=%u signal_buffers=%u\n", c.cycles, c.signal_buffers);
     /* The microphone is driving the graph, so the filter must have run. */
-    TPW_ASSERT(c.cycles > 0);
+    PWF_ASSERT(c.cycles > 0);
 
     /* Draining waits for already-queued input to reach on_process too. */
-    TPW_ASSERT_EQ(tpw_filter_stop(filter, true), TPW_OK);
-    tpw_filter_destroy(filter);
+    PWF_ASSERT_EQ(pwf_filter_stop(filter, true), PWF_OK);
+    pwf_filter_destroy(filter);
 }
 
 /* An audio/raw port does not negotiate against a device's audio/dsp graph.
@@ -189,29 +189,29 @@ static void test_audio_link(const char* mic)
 static void test_audio_raw_is_incompatible(const char* mic)
 {
     struct counters c = { .last_fd = -1 };
-    tpw_filter_h filter = tpw_filter_create("tpw-hw-audio-raw", on_process, &c);
-    TPW_ASSERT(filter != NULL);
+    pwf_filter_h filter = pwf_filter_create("pwf-hw-audio-raw", on_process, &c);
+    PWF_ASSERT(filter != NULL);
 
-    tpw_audio_config cfg = { .sample_rate = 48000, .channels = 2, .format = "F32" };
-    tpw_filter_port_h audio_in = tpw_filter_add_audio_port(filter, TPW_FILTER_PORT_INPUT, &cfg);
-    TPW_ASSERT(audio_in != NULL);
-    TPW_ASSERT_EQ(tpw_filter_start(filter), TPW_OK);
+    pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2, .format = "F32" };
+    pwf_filter_port_h audio_in = pwf_filter_add_audio_port(filter, PWF_FILTER_PORT_INPUT, &cfg);
+    PWF_ASSERT(audio_in != NULL);
+    PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
 
-    int res = tpw_filter_port_link(audio_in, mic);
+    int res = pwf_filter_port_link(audio_in, mic);
     printf("  link audio/raw -> '%s': %d (expected a clean failure)\n", mic, res);
-    TPW_ASSERT(res != TPW_OK);
+    PWF_ASSERT(res != PWF_OK);
     /* Whatever the failure, no partial link may be left behind. */
-    TPW_ASSERT_EQ(tpw_filter_port_unlink(audio_in), TPW_ERR_NOT_CONFIGURED);
+    PWF_ASSERT_EQ(pwf_filter_port_unlink(audio_in), PWF_ERR_NOT_CONFIGURED);
 
-    tpw_filter_stop(filter, false);
-    tpw_filter_destroy(filter);
+    pwf_filter_stop(filter, false);
+    pwf_filter_destroy(filter);
 }
 
 int main(void)
 {
     char camera[256], mic[256];
-    bool have_camera = tpw_test_find_node("Video/Source", camera, sizeof(camera));
-    bool have_mic = tpw_test_find_node("Audio/Source", mic, sizeof(mic));
+    bool have_camera = pwf_test_find_node("Video/Source", camera, sizeof(camera));
+    bool have_mic = pwf_test_find_node("Audio/Source", mic, sizeof(mic));
 
     if (!have_camera && !have_mic) {
         printf("no Video/Source or Audio/Source node present; skipping\n");
