@@ -1,11 +1,15 @@
 # pipewire-flow
 
-A small C library that wraps PipeWire's `pw_stream` API behind a simpler,
-unified interface for capturing audio and video. It hides PipeWire's
-thread-loop management, SPA POD format negotiation, and buffer
-dequeue/queue plumbing, exposing only a small opaque-handle API.
+A C library that gives PipeWire applications a simpler API. It hides
+PipeWire's thread-loop management, SPA POD format negotiation, and buffer
+dequeue/queue plumbing behind opaque handles, so capturing audio and video
+or playing audio takes a few calls. On top of that, its multi-port filters
+hand the callback every port's buffer together once per graph cycle, so a
+camera, a microphone and signal or MIDI/OSC event inputs can be processed
+as one synchronized bundle.
 
-Audio and camera **capture** are supported, as is audio **playback**.
+The `pwf_` prefix and the `<pwf/...>` headers are short for pipewire-flow.
+
 Video playback is out of scope: PipeWire has no video sink device to play
 into, so an application that wants to emit video becomes a source node
 instead — which is what a filter's output port already does.
