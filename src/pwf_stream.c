@@ -211,6 +211,8 @@ int pwf_stream_internal_connect(struct pwf_stream* stream, const struct spa_pod*
      * is what tells a session manager to leave the wiring to us. A DMABUF
      * buffer is not CPU-mapped, so MAP_BUFFERS is omitted for it. */
     enum pw_stream_flags flags = PW_STREAM_FLAG_RT_PROCESS;
+    /* Stay paused until pwf_stream_start() is called explicitly. */
+    flags |= PW_STREAM_FLAG_INACTIVE;
     if (!use_dmabuf)
         flags |= PW_STREAM_FLAG_MAP_BUFFERS;
     if (stream->autoconnect)
@@ -229,9 +231,6 @@ int pwf_stream_internal_connect(struct pwf_stream* stream, const struct spa_pod*
     /* Set only now that the new stream exists, still under the lock: no
      * event for it can be dispatched before this line runs. */
     stream->use_dmabuf = use_dmabuf;
-
-    /* Stay paused until pwf_stream_start() is called explicitly. */
-    pw_stream_set_active(stream->pw_stream, false);
 
     pw_thread_loop_unlock(stream->conn.loop);
     return PWF_OK;
