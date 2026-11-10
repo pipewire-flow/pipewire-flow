@@ -55,7 +55,8 @@ By default a stream auto-connects to PipeWire's default source for its
 media type. `pwf_stream_set_target()` points it at a specific node by
 name or serial instead (see `wpctl status` or `pw-cli ls Node`).
 Call it before `pwf_stream_set_audio_config()`/`pwf_stream_set_video_config()`,
-which is what actually connects the stream.
+which is what actually connects the stream; naming a target after that returns
+`PWF_ERR_INVALID_STATE`.
 
 `pwf_stream_get_target_list(stream, out, out_len, found)` finds those names
 for you, so an application does not have to shell out to `wpctl`/`pw-cli`:
@@ -96,8 +97,8 @@ pwf_stream_set_audio_config(s, &cfg);
 ```
 
 The role becomes the node's `media.role` when the format connects the stream,
-so set it first; changing it afterwards does not reach the node already
-connected. NULL or `""` clears it. The value is a free-form string because the
+so set it first; naming one afterwards returns `PWF_ERR_INVALID_STATE`.
+NULL or `""` clears it, at any time. The value is a free-form string because the
 set of roles belongs to the session manager's configuration, not to PipeWire.
 
 Like a target, it is only a hint, and **nothing checks it**: PipeWire itself
@@ -304,9 +305,9 @@ stream as it was.
 | data, playback | PipeWire's real-time data thread | start, stop, destroy, link, unlink, the target queries, the format setters |
 | error | the stream's loop thread | destroy, link, the target queries, the format setters, a draining stop |
 
-A stop without drain and `pwf_stream_unlink()` work in the error callback, and
-the setters that only record a value (`pwf_stream_set_target()`,
-`pwf_stream_set_role()` and the like) work anywhere. To re-route after losing
+A stop without drain and `pwf_stream_unlink()` work in the error callback.
+`pwf_stream_set_target()` and `pwf_stream_set_role()` can be called from any
+thread, but a connected stream only accepts clearing them. To re-route after losing
 a device, leave the error callback first: note what happened there, then link
 from your own thread.
 
