@@ -262,7 +262,7 @@ int pwf_filter_port_link(struct pwf_filter_port* port_handle, const char* target
     if (pwf_filter_refuse_in_callback(port->filter, true, __func__))
         return PWF_ERR_IN_CALLBACK;
     if (port->link_proxy)
-        return PWF_ERR_INVALID_ARG;
+        return PWF_ERR_INVALID_STATE; /* unlink first to re-target */
 
     struct pwf_filter* filter = port->filter;
     if (!filter || filter->state != PWF_FILTER_STATE_RUNNING)

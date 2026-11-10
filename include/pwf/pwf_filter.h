@@ -78,11 +78,11 @@ typedef void (*pwf_filter_process_func_t)(struct pwf_filter* filter, struct pwf_
  *
  * @param filter     The filter owning `port`.
  * @param port       The port that became unavailable.
- * @param error_code An enum pwf_error, currently always PWF_ERR_SOURCE_UNAVAILABLE.
+ * @param error_code Why; currently always PWF_ERR_SOURCE_UNAVAILABLE.
  * @param user_data  The pointer passed to pwf_filter_create().
  */
-typedef void (*pwf_filter_error_func_t)(struct pwf_filter* filter, struct pwf_filter_port* port, int error_code,
-                                         void* user_data);
+typedef void (*pwf_filter_error_func_t)(struct pwf_filter* filter, struct pwf_filter_port* port,
+                                         enum pwf_error error_code, void* user_data);
 
 /**
  * @brief Which real wire kind an event carries.
@@ -251,7 +251,7 @@ PWF_API size_t pwf_filter_port_get_dmabuf_planes(const struct pwf_filter_port_bu
  *
  * @param port   An input port, not yet started.
  * @param enable true to re-present the last buffer on an empty cycle, false to report no buffer instead.
- * @return PWF_OK, or PWF_ERR_INVALID_ARG for a NULL or output port, or a filter already started.
+ * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL or output port, or PWF_ERR_INVALID_STATE for a filter already started.
  */
 PWF_API int pwf_filter_port_set_hold(struct pwf_filter_port* port, bool enable);
 
@@ -265,7 +265,7 @@ PWF_API int pwf_filter_port_set_hold(struct pwf_filter_port* port, bool enable);
  *
  * @param filter        The filter to configure, not yet started.
  * @param max_period_ns Preferred maximum bundling period in nanoseconds, or 0 to clear the hint.
- * @return PWF_OK, or PWF_ERR_INVALID_ARG for a NULL filter or one already started.
+ * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL filter, or PWF_ERR_INVALID_STATE for one already started.
  */
 PWF_API int pwf_filter_set_period_hint(struct pwf_filter* filter, uint32_t max_period_ns);
 
@@ -279,7 +279,7 @@ PWF_API int pwf_filter_set_period_hint(struct pwf_filter* filter, uint32_t max_p
  *
  * @param port   An input port on a started filter.
  * @param target A node name, an object.serial, or "node:port"; naming only a node lets PipeWire pick a compatible port.
- * @return PWF_OK, or an enum pwf_error: NOT_CONFIGURED before start, INVALID_ARG for a bad port or target string or an already-linked port, NOT_FOUND for a target naming no node or port, IN_CALLBACK from inside a callback, INVALID_FORMAT when the link fails to negotiate, TIMEOUT when it does not negotiate in time, NO_MEMORY when an allocation fails, CONNECT_FAILED when the link cannot be created.
+ * @return PWF_OK, or an enum pwf_error: NOT_CONFIGURED before start, INVALID_ARG for a bad port or target string, INVALID_STATE for an already-linked port, NOT_FOUND for a target naming no node or port, IN_CALLBACK from inside a callback, INVALID_FORMAT when the link fails to negotiate, TIMEOUT when it does not negotiate in time, NO_MEMORY when an allocation fails, CONNECT_FAILED when the link cannot be created.
  */
 PWF_API int pwf_filter_port_link(struct pwf_filter_port* port, const char* target);
 

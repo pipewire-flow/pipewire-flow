@@ -95,19 +95,19 @@ static void on_audio_playback(struct pwf_stream* stream, struct pwf_stream_playb
     buf->size = ring_read(user_data, buf->data, buf->available);
 }
 
-static void on_audio_capture_error(struct pwf_stream* stream, int error_code, void* user_data)
+static void on_audio_capture_error(struct pwf_stream* stream, enum pwf_error error_code, void* user_data)
 {
     (void)stream;
     (void)user_data;
-    fprintf(stderr, "pwf_stream_loopback: audio capture source lost (error %d)\n", error_code);
+    fprintf(stderr, "pwf_stream_loopback: audio capture source lost (%s)\n", pwf_strerror(error_code));
     g_running = 0;
 }
 
-static void on_audio_playback_error(struct pwf_stream* stream, int error_code, void* user_data)
+static void on_audio_playback_error(struct pwf_stream* stream, enum pwf_error error_code, void* user_data)
 {
     (void)stream;
     (void)user_data;
-    fprintf(stderr, "pwf_stream_loopback: audio output device lost (error %d)\n", error_code);
+    fprintf(stderr, "pwf_stream_loopback: audio output device lost (%s)\n", pwf_strerror(error_code));
     g_running = 0;
 }
 
@@ -140,11 +140,11 @@ static void on_video_data(struct pwf_stream* stream, const struct pwf_stream_buf
             (long long)buf->pts);
 }
 
-static void on_video_error(struct pwf_stream* stream, int error_code, void* user_data)
+static void on_video_error(struct pwf_stream* stream, enum pwf_error error_code, void* user_data)
 {
     (void)stream;
     struct video_ctx* ctx = user_data;
-    fprintf(stderr, "video[%d]: source lost (error %d)\n", ctx->index, error_code);
+    fprintf(stderr, "video[%d]: source lost (%s)\n", ctx->index, pwf_strerror(error_code));
     g_running = 0;
 }
 

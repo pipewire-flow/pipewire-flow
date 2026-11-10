@@ -15,12 +15,12 @@ static void on_signal(int sig)
     g_running = 0;
 }
 
-static void on_error(struct pwf_filter* filter, struct pwf_filter_port* port, int error_code, void* user_data)
+static void on_error(struct pwf_filter* filter, struct pwf_filter_port* port, enum pwf_error error_code, void* user_data)
 {
     (void)filter;
     (void)port;
     (void)user_data;
-    fprintf(stderr, "filter_mix: a port's source was lost (error %d)\n", error_code);
+    fprintf(stderr, "filter_mix: a port's source was lost (%s)\n", pwf_strerror(error_code));
 }
 
 /* Sums the two audio inputs sample-by-sample (with clipping) into the

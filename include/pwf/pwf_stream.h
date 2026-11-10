@@ -89,10 +89,10 @@ typedef void (*pwf_stream_playback_func_t)(struct pwf_stream* stream, struct pwf
  * and only logs, so re-route or destroy the stream after the callback returns.
  *
  * @param stream     The affected stream.
- * @param error_code An enum pwf_error, currently always PWF_ERR_SOURCE_UNAVAILABLE.
+ * @param error_code Why; currently always PWF_ERR_SOURCE_UNAVAILABLE.
  * @param user_data  The pointer passed to pwf_stream_create()/pwf_stream_create_playback().
  */
-typedef void (*pwf_stream_error_func_t)(struct pwf_stream* stream, int error_code, void* user_data);
+typedef void (*pwf_stream_error_func_t)(struct pwf_stream* stream, enum pwf_error error_code, void* user_data);
 
 /**
  * @brief Creates a stream of `type`.
@@ -145,7 +145,7 @@ PWF_API int pwf_stream_set_error_callback(struct pwf_stream* stream, pwf_stream_
  *
  * @param stream The stream to target, before its format is set.
  * @param target A node name or object.serial, or NULL to clear a previously set target.
- * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL `stream` or for a non-NULL `target` while autoconnect is off, or PWF_ERR_NO_MEMORY when the name cannot be copied.
+ * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL `stream`, PWF_ERR_INVALID_STATE for a non-NULL `target` while autoconnect is off, or PWF_ERR_NO_MEMORY when the name cannot be copied.
  */
 PWF_API int pwf_stream_set_target(struct pwf_stream* stream, const char* target);
 
@@ -227,7 +227,7 @@ PWF_API int pwf_stream_get_target_video_formats(struct pwf_stream* stream, const
  *
  * @param stream The stream to configure, before its format is set.
  * @param enable false to opt out of autoconnect (manual wiring via pwf_stream_link()); true puts the stream back under the session manager, and leaves any target already set in place.
- * @return PWF_OK, or PWF_ERR_INVALID_ARG for a NULL `stream`, a format already set, or `enable` false while a target is set.
+ * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL `stream`, or PWF_ERR_INVALID_STATE for a format already set or `enable` false while a target is set.
  */
 PWF_API int pwf_stream_set_autoconnect(struct pwf_stream* stream, bool enable);
 
@@ -252,7 +252,7 @@ PWF_API int pwf_stream_set_autoconnect(struct pwf_stream* stream, bool enable);
  *
  * @param stream The running stream to wire, with autoconnect off.
  * @param target A node name or an object.serial.
- * @return PWF_OK, or an enum pwf_error: NOT_CONFIGURED before start, INVALID_ARG for a bad mode, target string or channel count or an already-linked stream, NOT_FOUND for a target naming no node, IN_CALLBACK from inside a callback, TIMEOUT when the stream's ports or a link do not appear in time, INVALID_FORMAT when a link fails to negotiate, NO_MEMORY when an allocation fails, CONNECT_FAILED when a link cannot be created.
+ * @return PWF_OK, or an enum pwf_error: NOT_CONFIGURED before start, INVALID_ARG for a bad target string or channel count, INVALID_STATE with autoconnect on or for an already-linked stream, NOT_FOUND for a target naming no node, IN_CALLBACK from inside a callback, TIMEOUT when the stream's ports or a link do not appear in time, INVALID_FORMAT when a link fails to negotiate, NO_MEMORY when an allocation fails, CONNECT_FAILED when a link cannot be created.
  */
 PWF_API int pwf_stream_link(struct pwf_stream* stream, const char* target);
 

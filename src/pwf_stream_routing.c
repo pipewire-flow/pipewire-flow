@@ -293,9 +293,9 @@ int pwf_stream_link(struct pwf_stream* handle, const char* target)
     if (pwf_stream_refuse_in_callback(stream, true, __func__))
         return PWF_ERR_IN_CALLBACK;
     if (stream->autoconnect)
-        return PWF_ERR_INVALID_ARG; /* two parties would own the wiring */
+        return PWF_ERR_INVALID_STATE; /* two parties would own the wiring */
     if (stream->links)
-        return PWF_ERR_INVALID_ARG; /* unlink first to re-target */
+        return PWF_ERR_INVALID_STATE; /* unlink first to re-target */
     if (stream->state != PWF_STREAM_STATE_RUNNING || !stream->pw_stream)
         return PWF_ERR_NOT_CONFIGURED; /* the graph is where we look things up */
 

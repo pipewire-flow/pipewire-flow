@@ -229,7 +229,7 @@ int pwf_filter_set_period_hint(struct pwf_filter* handle, uint32_t max_period_ns
     if (!filter)
         return PWF_ERR_INVALID_ARG;
     if (filter->state != PWF_FILTER_STATE_CREATED)
-        return PWF_ERR_INVALID_ARG;
+        return PWF_ERR_INVALID_STATE;
 
     filter->period_hint_ns = max_period_ns;
     return PWF_OK;
