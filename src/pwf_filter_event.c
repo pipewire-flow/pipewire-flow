@@ -312,7 +312,7 @@ int pwf_filter_port_push_event(struct pwf_filter_port* port_handle, const struct
         pwf_filter_pending_event_pop_last(port);
         if (lock)
             pw_thread_loop_unlock(filter->conn.loop);
-        return PWF_ERR_INVALID_ARG;
+        return PWF_ERR_NO_SPACE;
     }
 
     if (lock)

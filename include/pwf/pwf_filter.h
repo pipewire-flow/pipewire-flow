@@ -378,7 +378,7 @@ PWF_API int pwf_filter_port_get_event(struct pwf_filter_port* port, size_t index
  *
  * @param port  The event port to push to.
  * @param event The event to copy and enqueue.
- * @return PWF_OK, PWF_ERR_INVALID_ARG (wrong port kind, an invalid/unrecognized PROPERTY key, or — output ports only — no room left in the current cycle's buffer), or PWF_ERR_NO_MEMORY when the event cannot be copied.
+ * @return PWF_OK, PWF_ERR_INVALID_ARG (wrong port kind, or an invalid/unrecognized PROPERTY key), PWF_ERR_NO_SPACE (output ports only: no room left in the current cycle's buffer, or no buffer this cycle), or PWF_ERR_NO_MEMORY when the event cannot be copied.
  */
 PWF_API int pwf_filter_port_push_event(struct pwf_filter_port* port, const struct pwf_event* event);
 
