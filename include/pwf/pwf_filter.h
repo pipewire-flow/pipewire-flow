@@ -403,15 +403,16 @@ PWF_API int pwf_filter_start(struct pwf_filter* filter);
 /**
  * @brief Stops processing; the filter may be restarted via pwf_filter_start().
  *
- * With `drain` true, blocks until every buffer already queued has
- * actually been sent out an output port or handed to the processing
- * callback on an input port, so nothing already queued is lost. If
- * that does not complete within a few seconds, a warning is logged
- * and the filter stops anyway. It is refused from the process callback, and a
- * draining stop from the error callback too.
+ * With `drain` true, a filter whose ports are all outputs blocks until every
+ * buffer already queued has actually been sent. If that does not complete
+ * within a few seconds, a warning is logged and the filter stops anyway. A
+ * filter with an input port stops at once, since a live source leaves no
+ * point at which its input has run dry. It is refused from the process
+ * callback, and a draining stop from the error callback too, whichever the
+ * ports.
  *
  * @param filter The filter to stop.
- * @param drain  true to wait for what is already queued to finish first.
+ * @param drain  true to wait for queued output to finish first; no wait on a filter with an input port.
  * @return PWF_OK, or an enum pwf_error.
  */
 PWF_API int pwf_filter_stop(struct pwf_filter* filter, bool drain);

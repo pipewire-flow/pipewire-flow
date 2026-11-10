@@ -355,15 +355,15 @@ PWF_API int pwf_stream_start(struct pwf_stream* stream);
 /**
  * @brief Stops data delivery; the stream may be started again later.
  *
- * With `drain` true, blocks until every buffer already queued has
- * actually been played (a playback stream) or delivered to the data
- * callback (a capture stream), so nothing already queued is lost. If
- * that does not complete within a few seconds (a lost device, for
- * instance), a warning is logged and the stream stops anyway. It is refused
- * from the data callback, and a draining stop from the error callback too.
+ * With `drain` true, a playback stream blocks until every buffer already
+ * queued has actually been played, so nothing queued is lost. If that does
+ * not complete within a few seconds (a lost device, for instance), a warning
+ * is logged and the stream stops anyway. A capture stream has no queue to
+ * wait out and stops at once. It is refused from the data callback, and a
+ * draining stop from the error callback too, whichever the direction.
  *
  * @param stream The stream to stop.
- * @param drain  true to wait for what is already queued to finish first.
+ * @param drain  true to wait for queued playback to finish first; no wait on a capture stream.
  * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL `stream`, or PWF_ERR_IN_CALLBACK for a stop refused inside a callback.
  */
 PWF_API int pwf_stream_stop(struct pwf_stream* stream, bool drain);

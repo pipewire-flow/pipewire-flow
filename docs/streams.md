@@ -37,12 +37,12 @@ pwf_stream_set_video_config(stream, &v);   /* fps = 0 lets the source pick the r
 
 **Finishing cleanly.** `pwf_stream_stop(stream, false)` pauses immediately,
 which can cut off the last buffer or two already queued with the device —
-usually a few tens of milliseconds. `pwf_stream_stop(stream, true)` instead
-blocks the calling thread until everything already queued has actually been
-played (playback) or delivered to the data callback (capture) before
-pausing, so nothing is lost. If the device disappears mid-drain, a warning
-is logged and the stream stops anyway after a few seconds rather than
-blocking forever.
+usually a few tens of milliseconds. On a playback stream,
+`pwf_stream_stop(stream, true)` instead blocks the calling thread until
+everything already queued has actually been played before pausing, so nothing
+is lost. If the device disappears mid-drain, a warning is logged and the
+stream stops anyway after a few seconds rather than blocking forever. A capture
+stream has no queue to wait out, so it stops at once either way.
 
 Setting the format is what connects the stream, so setting it again replaces
 that connection. It returns `PWF_ERR_INVALID_STATE` while the stream runs or
@@ -223,8 +223,8 @@ or perform I/O. A cycle whose callback overruns its budget is emitted as
 silence and logged — rate-limited to one report per second, so a persistently
 slow callback does not drown the log — and is never reported through the error
 callback, which stays reserved for the output device disappearing.
-`pwf_stream_stop(stream, true)` (see [Capture](#capture)) drains the
-device the same way as for a capture stream.
+`pwf_stream_stop(stream, true)` waits for what is already queued to be played;
+see [Capture](#capture).
 
 ## Wiring a stream yourself
 
