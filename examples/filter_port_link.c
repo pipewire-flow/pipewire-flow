@@ -52,7 +52,7 @@ static void on_process(struct pwf_filter* filter, struct pwf_filter_port_buffer*
 
     for (size_t i = 0; i < n_buffers; i++) {
         struct pwf_dmabuf_plane plane;
-        if (pwf_filter_port_get_dmabuf_planes(&buffers[i], &plane, 1) > 0)
+        if (pwf_filter_port_buffer_get_dmabuf_planes(&buffers[i], &plane, 1) > 0)
             printf("  port %zu: dmabuf fd=%d stride=%u fresh=%d seq=%llu\n", i, plane.fd, plane.stride,
                    (int)buffers[i].fresh, (unsigned long long)buffers[i].seq);
         else if (buffers[i].data)

@@ -64,7 +64,7 @@ struct pwf_filter_port {
 
     /* Staged application-pushed buffer (input ports only), consumed and
      * cleared on the next processing cycle. pushed_pts is the pts
-     * argument pwf_filter_push_port_data() was called with, carried
+     * argument pwf_filter_port_push_data() was called with, carried
      * through to that cycle's pwf_filter_port_buffer.pts. */
     void* pushed_data;
     size_t pushed_size;

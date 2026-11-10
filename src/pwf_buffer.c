@@ -9,14 +9,14 @@
 
 /* Hands the current DMABUF-backed buffer to the callback with no CPU
  * data, then warns once per interval if the callback never read its
- * descriptor through pwf_stream_get_dmabuf_planes(). */
+ * descriptor through pwf_stream_buffer_get_dmabuf_planes(). */
 static void pwf_stream_deliver_dmabuf(struct pwf_stream* stream, struct spa_buffer* buf, int64_t pts)
 {
     stream->current_dmabuf_buf = buf;
     stream->dmabuf_retrieved = false;
 
     if (stream->data_cb) {
-        struct pwf_stream_buffer sbuf = { .data = NULL, .size = 0, .pts = pts };
+        struct pwf_stream_buffer sbuf = { .data = NULL, .size = 0, .pts = pts, .stream = stream };
         stream->data_cb(stream, &sbuf, stream->user_data);
     }
 
@@ -24,7 +24,7 @@ static void pwf_stream_deliver_dmabuf(struct pwf_stream* stream, struct spa_buff
         pwf_rate_limited(&stream->dmabuf_unretrieved_last_log_ns, &stream->dmabuf_unretrieved_suppressed,
                           pwf_monotonic_ns())) {
         pwf_log_warning("stream: a DMABUF frame's descriptor was never read via "
-                        "pwf_stream_get_dmabuf_planes() (%llu more suppressed)",
+                        "pwf_stream_buffer_get_dmabuf_planes() (%llu more suppressed)",
                         (unsigned long long)stream->dmabuf_unretrieved_suppressed);
         stream->dmabuf_unretrieved_suppressed = 0;
     }
@@ -57,7 +57,7 @@ void pwf_stream_on_process(void* data)
     } else {
         struct spa_data* d = &buf->datas[0];
         if (d->data && d->chunk && d->chunk->size > 0 && stream->data_cb) {
-            struct pwf_stream_buffer sbuf = { .data = d->data, .size = d->chunk->size, .pts = pts };
+            struct pwf_stream_buffer sbuf = { .data = d->data, .size = d->chunk->size, .pts = pts, .stream = stream };
             stream->data_cb(stream, &sbuf, stream->user_data);
         }
     }

@@ -254,17 +254,15 @@ void pwf_filter_event_free_port(struct pwf_filter_port* port)
     free(port->incoming_events);
 }
 
-size_t pwf_filter_port_get_event_count(struct pwf_filter_port* port_handle)
+size_t pwf_filter_port_get_event_count(const struct pwf_filter_port* port)
 {
-    struct pwf_filter_port* port = (struct pwf_filter_port*)port_handle;
     if (!port || port->media_type != PWF_DATA_EVENT || port->direction != PWF_FILTER_PORT_INPUT)
         return 0;
     return port->n_incoming_events;
 }
 
-int pwf_filter_port_get_event(struct pwf_filter_port* port_handle, size_t index, struct pwf_event* out)
+int pwf_filter_port_get_event(const struct pwf_filter_port* port, size_t index, struct pwf_event* out)
 {
-    struct pwf_filter_port* port = (struct pwf_filter_port*)port_handle;
     if (!port || port->media_type != PWF_DATA_EVENT || port->direction != PWF_FILTER_PORT_INPUT || !out)
         return PWF_ERR_INVALID_ARG;
     if (index >= port->n_incoming_events)

@@ -7,7 +7,7 @@
    immediately followed by its own `<name>_len` capacity in-param. That
    specific adjacent pair is allowed in either order, keeping an array
    and its capacity next to each other: this project's
-   pwf_stream_get_dmabuf_planes()/pwf_filter_port_get_dmabuf_planes() use it for
+   pwf_stream_buffer_get_dmabuf_planes()/pwf_filter_port_buffer_get_dmabuf_planes() use it for
    their `planes`/`planes_len` pair.
 2. Every function/callback/type has a doc block with @brief; every
    non-void function/callback also has @return; the @param name list

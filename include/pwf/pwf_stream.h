@@ -31,9 +31,10 @@ struct pwf_stream;
  * valid only for the duration of the data callback.
  */
 struct pwf_stream_buffer {
-    void* data;  /**< Captured bytes, or NULL when the stream negotiated DMABUF (see pwf_stream_get_dmabuf_planes()). */
+    void* data;  /**< Captured bytes, or NULL when the stream negotiated DMABUF (see pwf_stream_buffer_get_dmabuf_planes()). */
     size_t size; /**< Bytes available at `data`; 0 when `data` is NULL. */
     int64_t pts; /**< Capture timestamp in nanoseconds (the driver clock used by the underlying SPA node, e.g. ALSA or V4L2), or -1 if the buffer carried no timestamp metadata. */
+    struct pwf_stream* stream; /**< The stream this buffer was delivered on. */
 };
 
 /**
@@ -303,7 +304,7 @@ struct pwf_stream_dmabuf_opts {
  * Equivalent to pwf_stream_set_video_config() when `opts` is NULL. With
  * opts->memory == PWF_PORT_MEMORY_DMABUF, the stream negotiates DMABUF
  * frames: pwf_stream_buffer.data is NULL for each delivered frame and
- * planes are read via pwf_stream_get_dmabuf_planes(). Video capture only —
+ * planes are read via pwf_stream_buffer_get_dmabuf_planes(). Video capture only —
  * the same type/direction rejection as pwf_stream_set_video_config()
  * applies, so calling this on an audio or playback stream returns
  * PWF_ERR_INVALID_ARG.
@@ -327,21 +328,22 @@ PWF_API int pwf_stream_set_video_config_ex(struct pwf_stream* stream, const stru
                                             const struct pwf_stream_dmabuf_opts* opts);
 
 /**
- * @brief Fills up to `planes_len` entries of `planes` with the current
- *        cycle's DMABUF frame layout.
+ * @brief Fills up to `planes_len` entries of `planes` with the DMABUF
+ *        frame layout of `buf`.
  *
- * Valid only during the data callback (pwf_stream_data_func_t). `planes`
+ * Valid only during the data callback (pwf_stream_data_func_t) that
+ * delivered `buf`. `planes`
  * comes before `planes_len`, its own capacity, rather than after,
  * keeping the array and its capacity adjacent even though `planes` is
  * the out-parameter here.
  *
- * @param[in]  stream     The stream whose current-cycle buffer to read.
+ * @param[in]  buf        The buffer to read, as this cycle's pwf_stream_data_func_t received it.
  * @param[out] planes     Filled with up to `planes_len` planes, most-significant plane first.
  * @param[in]  planes_len Capacity of `planes`.
- * @return The plane count actually available, which may exceed `planes_len` if it was too small; 0 for a non-DMABUF stream or a cycle with no buffer, and `planes` is left unwritten.
+ * @return The plane count actually available, which may exceed `planes_len` if it was too small; 0 for a NULL `buf` or a non-DMABUF stream, and `planes` is left unwritten.
  */
-PWF_API size_t pwf_stream_get_dmabuf_planes(struct pwf_stream* stream, struct pwf_dmabuf_plane* planes,
-                                            size_t planes_len);
+PWF_API size_t pwf_stream_buffer_get_dmabuf_planes(const struct pwf_stream_buffer* buf,
+                                                   struct pwf_dmabuf_plane* planes, size_t planes_len);
 
 /**
  * @brief Starts data delivery. Requires a format to already be set.
