@@ -300,6 +300,9 @@ int pwf_stream_set_target(struct pwf_stream* handle, const char* target)
         return PWF_ERR_INVALID_ARG;
     if (target && *target && !stream->autoconnect)
         return PWF_ERR_INVALID_STATE; /* see pwf_stream_set_autoconnect() */
+    /* Read only when the format connects the stream, so it would not apply. */
+    if (target && *target && stream->pw_stream)
+        return PWF_ERR_INVALID_STATE;
 
     return pwf_stream_replace_string(&stream->target, target);
 }
@@ -309,6 +312,9 @@ int pwf_stream_set_role(struct pwf_stream* handle, const char* role)
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     if (!stream)
         return PWF_ERR_INVALID_ARG;
+    /* Read only when the format connects the stream, so it would not apply. */
+    if (role && *role && stream->pw_stream)
+        return PWF_ERR_INVALID_STATE;
 
     return pwf_stream_replace_string(&stream->role, role);
 }

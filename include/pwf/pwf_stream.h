@@ -138,15 +138,16 @@ PWF_API int pwf_stream_set_error_callback(struct pwf_stream* stream, pwf_stream_
  *
  * Call it before pwf_stream_set_audio_config()/
  * pwf_stream_set_video_config(), which is what actually connects the
- * stream; a target set after that is kept but never read. If never
- * called, the stream auto-connects to PipeWire's default source for its
- * media type. This is a hint to the session manager, which does the
- * wiring, so it means nothing while autoconnect is off: naming a target
- * then is refused, though clearing with NULL is always accepted.
+ * stream; naming a target after that is refused, since it could no longer
+ * take effect. If never called, the stream auto-connects to PipeWire's
+ * default source for its media type. This is a hint to the session
+ * manager, which does the wiring, so it means nothing while autoconnect is
+ * off: naming a target then is refused, though clearing with NULL is always
+ * accepted.
  *
  * @param stream The stream to target, before its format is set.
  * @param target A node name or object.serial, or NULL to clear a previously set target.
- * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL `stream`, PWF_ERR_INVALID_STATE for a non-NULL `target` while autoconnect is off, or PWF_ERR_NO_MEMORY when the name cannot be copied.
+ * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL `stream`, PWF_ERR_INVALID_STATE for a non-NULL `target` while autoconnect is off or once the stream is connected, or PWF_ERR_NO_MEMORY when the name cannot be copied.
  */
 PWF_API int pwf_stream_set_target(struct pwf_stream* stream, const char* target);
 
@@ -156,13 +157,13 @@ PWF_API int pwf_stream_set_target(struct pwf_stream* stream, const char* target)
  *
  * Like a target, it is a hint to the session manager's role policy and is
  * read when pwf_stream_set_audio_config()/pwf_stream_set_video_config()
- * connects the stream, so a role set later does not reach that node.
- * Nothing acts on it without such a policy, which is why it is accepted
+ * connects the stream, so naming a role after that is refused; clearing
+ * with NULL is always accepted. Nothing acts on it without such a policy, which is why it is accepted
  * whatever the autoconnect setting, where a target is not.
  *
  * @param stream The stream to label, before its format is set.
  * @param role   A role name, or NULL to clear a previously set role.
- * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL `stream`, or PWF_ERR_NO_MEMORY when the role cannot be copied.
+ * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL `stream`, PWF_ERR_INVALID_STATE for a non-NULL `role` once the stream is connected, or PWF_ERR_NO_MEMORY when the role cannot be copied.
  */
 PWF_API int pwf_stream_set_role(struct pwf_stream* stream, const char* role);
 
