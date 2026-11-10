@@ -191,7 +191,7 @@ struct pwf_filter* pwf_filter_create(const char* name, pwf_filter_process_func_t
     pw_thread_loop_lock(filter->conn.loop);
     /* Linking a port is optional, so ports may stay unlinked forever;
      * node.always-process keeps .process() firing regardless so the app can
-     * drive I/O via push_port_data. */
+     * drive I/O via pwf_filter_port_push_data(). */
     struct pw_properties* props = pw_properties_new(PW_KEY_NODE_ALWAYS_PROCESS, "true", NULL);
     /* PipeWire names an unnamed node after the process, so the name has to be
      * set here for other nodes and pwf_filter_port_link() to find it. */

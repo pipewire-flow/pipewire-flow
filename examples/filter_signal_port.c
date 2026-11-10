@@ -63,7 +63,7 @@ int main(void)
     while (g_running) {
         /* Stand in for a real sensor: a ramp value, wrapping at 1.0. No
          * hardware timestamp exists for a synthetic value like this. */
-        pwf_filter_push_port_data(filter, sig_in, &value, sizeof(value), -1);
+        pwf_filter_port_push_data(sig_in, &value, sizeof(value), -1);
         value += 0.05f;
         if (value > 1.0f)
             value -= 2.0f;

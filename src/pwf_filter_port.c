@@ -71,10 +71,13 @@ static void* pwf_filter_add_port_common(struct pwf_filter* filter, enum pwf_filt
     return port_data;
 }
 
-enum pwf_data_type pwf_filter_port_get_type(struct pwf_filter_port* port_handle)
+enum pwf_data_type pwf_filter_port_get_type(const struct pwf_filter_port* port)
 {
-    struct pwf_filter_port* port = (struct pwf_filter_port*)port_handle;
-    return port ? port->media_type : PWF_DATA_AUDIO;
+    if (!port) {
+        pwf_log_error("%s: port is NULL", __func__);
+        return PWF_DATA_AUDIO;
+    }
+    return port->media_type;
 }
 
 struct pwf_filter_port* pwf_filter_add_audio_port(struct pwf_filter* handle, enum pwf_filter_port_direction direction,
@@ -125,13 +128,11 @@ struct pwf_filter_port* pwf_filter_add_audio_port(struct pwf_filter* handle, enu
     return port;
 }
 
-int pwf_filter_push_port_data(struct pwf_filter* handle, struct pwf_filter_port* port_handle, const void* data,
-                              size_t size, int64_t pts)
+int pwf_filter_port_push_data(struct pwf_filter_port* port, const void* data, size_t size, int64_t pts)
 {
-    struct pwf_filter* filter = (struct pwf_filter*)handle;
-    struct pwf_filter_port* port = (struct pwf_filter_port*)port_handle;
-    if (!filter || !port || port->filter != filter || port->direction != PWF_FILTER_PORT_INPUT)
+    if (!port || port->direction != PWF_FILTER_PORT_INPUT)
         return PWF_ERR_INVALID_ARG;
+    struct pwf_filter* filter = port->filter;
     if (port->media_type == PWF_DATA_EVENT)
         return PWF_ERR_INVALID_ARG;
     if (size > 0 && !data)

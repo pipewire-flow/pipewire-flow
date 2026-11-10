@@ -119,6 +119,7 @@ struct video_ctx {
 
 static void on_video_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
+    (void)stream;
     struct video_ctx* ctx = user_data;
     ctx->frames++;
 
@@ -129,7 +130,7 @@ static void on_video_data(struct pwf_stream* stream, const struct pwf_stream_buf
     }
 
     struct pwf_dmabuf_plane planes[4];
-    size_t n_planes = pwf_stream_get_dmabuf_planes(stream, planes, 4);
+    size_t n_planes = pwf_stream_buffer_get_dmabuf_planes(buf, planes, 4);
     if (n_planes == 0) {
         fprintf(stderr, "video[%d]: frame %llu, no DMABUF plane yet (pts=%lld ns)\n", ctx->index,
                 (unsigned long long)ctx->frames, (long long)buf->pts);

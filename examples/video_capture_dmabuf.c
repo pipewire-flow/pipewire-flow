@@ -16,10 +16,11 @@ static void on_signal(int sig)
 
 static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
+    (void)stream;
     (void)user_data;
 
     struct pwf_dmabuf_plane planes[4];
-    size_t n_planes = pwf_stream_get_dmabuf_planes(stream, planes, 4);
+    size_t n_planes = pwf_stream_buffer_get_dmabuf_planes(buf, planes, 4);
     if (n_planes == 0) {
         printf("video: frame with no DMABUF plane (pts=%lld ns)\n", (long long)buf->pts);
         return;

@@ -28,7 +28,7 @@ struct pwf_filter_port;
 
 /** @brief Direction of a filter port. */
 enum pwf_filter_port_direction {
-    PWF_FILTER_PORT_INPUT  = 0, /**< Consumes data delivered by the graph, or pushed with pwf_filter_push_port_data()/pwf_filter_port_push_event(). */
+    PWF_FILTER_PORT_INPUT  = 0, /**< Consumes data delivered by the graph, or pushed with pwf_filter_port_push_data()/pwf_filter_port_push_event(). */
     PWF_FILTER_PORT_OUTPUT = 1  /**< Produces data for the graph, written from the processing callback. */
 };
 
@@ -43,7 +43,7 @@ struct pwf_filter_port_buffer {
     void* data;   /**< NULL if no buffer was available this cycle. */
     size_t size;  /**< Input: bytes available to read. Output: bytes to publish; set by the callback before returning (0 = no output this cycle). */
     size_t capacity; /**< Output ports only: max bytes `data` can hold. */
-    int64_t pts; /**< Input ports only: capture/presentation timestamp in nanoseconds from the source (e.g. an ALSA/V4L2 device's driver clock), or the value passed to pwf_filter_push_port_data() for pushed data. -1 if unavailable. Always -1 on output ports and on event ports (each struct pwf_event carries its own `offset` instead). */
+    int64_t pts; /**< Input ports only: capture/presentation timestamp in nanoseconds from the source (e.g. an ALSA/V4L2 device's driver clock), or the value passed to pwf_filter_port_push_data() for pushed data. -1 if unavailable. Always -1 on output ports and on event ports (each struct pwf_event carries its own `offset` instead). */
     bool fresh;  /**< Input ports only: true only when this buffer is new this cycle; false for a held re-presentation (see pwf_filter_port_set_hold()) or a cycle with no buffer. Always false on output ports. */
     uint64_t seq; /**< Input ports only: per-port update counter that advances only when new data arrives, so it is unchanged across held cycles and its deltas count genuinely new buffers. */
 };
@@ -198,7 +198,7 @@ PWF_API struct pwf_filter_port* pwf_filter_add_video_port(struct pwf_filter* fil
  *
  * A NULL or zeroed struct means AUTO, i.e. the behavior of the non-_ex
  * add call. enum pwf_port_memory is declared in pwf_stream.h, shared with
- * pwf_stream_get_dmabuf_planes().
+ * pwf_stream_buffer_get_dmabuf_planes().
  */
 struct pwf_filter_port_opts {
     enum pwf_port_memory memory; /**< AUTO (default) or DMABUF; any other value is rejected. */
@@ -211,7 +211,7 @@ struct pwf_filter_port_opts {
  * Equivalent to pwf_filter_add_video_port() when `opts` is NULL. With
  * opts->memory == PWF_PORT_MEMORY_DMABUF the port (input only) negotiates
  * DMABUF frames; its pwf_filter_port_buffer.data is NULL and planes are
- * read via pwf_filter_port_get_dmabuf_planes().
+ * read via pwf_filter_port_buffer_get_dmabuf_planes().
  *
  * @param filter    The filter to add the port to, not yet started.
  * @param direction PWF_FILTER_PORT_INPUT or PWF_FILTER_PORT_OUTPUT.
@@ -238,7 +238,7 @@ PWF_API struct pwf_filter_port* pwf_filter_add_video_port_ex(struct pwf_filter* 
  * @param[in]  planes_len Capacity of `planes`.
  * @return The plane count actually available, which may exceed `planes_len` if it was too small; 0 for a non-DMABUF port or a cycle with no buffer, and `planes` is left unwritten.
  */
-PWF_API size_t pwf_filter_port_get_dmabuf_planes(const struct pwf_filter_port_buffer* buf,
+PWF_API size_t pwf_filter_port_buffer_get_dmabuf_planes(const struct pwf_filter_port_buffer* buf,
                                                   struct pwf_dmabuf_plane* planes, size_t planes_len);
 
 /**
@@ -329,10 +329,10 @@ PWF_API struct pwf_filter_port* pwf_filter_add_event_port(struct pwf_filter* fil
  *
  * Valid for any port handle obtained from any add_*_port() call.
  *
- * @param port The port to query.
- * @return The enum pwf_data_type `port` was added as.
+ * @param port The port to query; must not be NULL.
+ * @return The enum pwf_data_type `port` was added as. A NULL `port` is a caller error: it is logged and reads as PWF_DATA_AUDIO, which no check can tell from a real audio port.
  */
-PWF_API enum pwf_data_type pwf_filter_port_get_type(struct pwf_filter_port* port);
+PWF_API enum pwf_data_type pwf_filter_port_get_type(const struct pwf_filter_port* port);
 
 /**
  * @brief Returns the number of events available on `port` (an input
@@ -343,7 +343,7 @@ PWF_API enum pwf_data_type pwf_filter_port_get_type(struct pwf_filter_port* port
  * @param port An input event port.
  * @return The event count for this cycle; 0 if none.
  */
-PWF_API size_t pwf_filter_port_get_event_count(struct pwf_filter_port* port);
+PWF_API size_t pwf_filter_port_get_event_count(const struct pwf_filter_port* port);
 
 /**
  * @brief Reads the event at `index` (0-based, cycle-delivery order) on
@@ -358,7 +358,7 @@ PWF_API size_t pwf_filter_port_get_event_count(struct pwf_filter_port* port);
  * @param[out] out   Filled with the event at `index`.
  * @return PWF_OK, or an enum pwf_error (invalid index, or wrong port kind/direction).
  */
-PWF_API int pwf_filter_port_get_event(struct pwf_filter_port* port, size_t index, struct pwf_event* out);
+PWF_API int pwf_filter_port_get_event(const struct pwf_filter_port* port, size_t index, struct pwf_event* out);
 
 /**
  * @brief Adds one event to `port`'s event queue; the library copies
@@ -371,7 +371,7 @@ PWF_API int pwf_filter_port_get_event(struct pwf_filter_port* port, size_t index
  *     cycle's negotiated buffer).
  *   - Input port: stages the event for delivery on the filter's next
  *     processing cycle, without creating any PipeWire-level connection
- *     — the event-port equivalent of pwf_filter_push_port_data(), for
+ *     — the event-port equivalent of pwf_filter_port_push_data(), for
  *     application code (for example, a test or another in-process
  *     source) to feed an event port directly. Callable anytime, not
  *     just from within the processing callback.
@@ -393,15 +393,13 @@ PWF_API int pwf_filter_port_push_event(struct pwf_filter_port* port, const struc
  * instead. A cycle that begins while another push to the filter is still
  * being copied leaves the staged data to the cycle after it, never waiting.
  *
- * @param filter The filter owning `port`.
- * @param port   An input, non-event port on `filter`.
- * @param data   Bytes to stage; copied by the library.
- * @param size   Bytes at `data`.
- * @param pts    Carried through unchanged to that cycle's pwf_filter_port_buffer.pts; pass -1 if the source has no timestamp (e.g. pwf_stream_data_func_t's own `pts` when bridging a capture stream into a filter).
- * @return PWF_OK, PWF_ERR_INVALID_ARG for a bad filter, port or data, or PWF_ERR_NO_MEMORY when the push buffer cannot grow.
+ * @param port An input, non-event port.
+ * @param data Bytes to stage; copied by the library.
+ * @param size Bytes at `data`.
+ * @param pts  Carried through unchanged to that cycle's pwf_filter_port_buffer.pts; pass -1 if the source has no timestamp (e.g. pwf_stream_data_func_t's own `pts` when bridging a capture stream into a filter).
+ * @return PWF_OK, PWF_ERR_INVALID_ARG for a bad port or data, or PWF_ERR_NO_MEMORY when the push buffer cannot grow.
  */
-PWF_API int pwf_filter_push_port_data(struct pwf_filter* filter, struct pwf_filter_port* port, const void* data,
-                                      size_t size, int64_t pts);
+PWF_API int pwf_filter_port_push_data(struct pwf_filter_port* port, const void* data, size_t size, int64_t pts);
 
 /**
  * @brief Starts processing. Fails if the filter has zero ports.

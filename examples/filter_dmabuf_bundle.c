@@ -29,7 +29,7 @@ static void on_process(struct pwf_filter* filter, struct pwf_filter_port_buffer*
     struct pwf_filter_port_buffer* sig = &buffers[1];
 
     struct pwf_dmabuf_plane planes[4];
-    size_t n_planes = pwf_filter_port_get_dmabuf_planes(video, planes, 4);
+    size_t n_planes = pwf_filter_port_buffer_get_dmabuf_planes(video, planes, 4);
 
     /* With hold enabled, `fresh` distinguishes a newly captured frame from
      * a re-presented one; `seq` counts genuinely new frames. */
@@ -80,7 +80,7 @@ int main(void)
            "video source to the filter's video port. Press Ctrl+C to stop...\n");
     float value = 0.0f;
     while (g_running) {
-        pwf_filter_push_port_data(filter, sig_in, &value, sizeof(value), -1);
+        pwf_filter_port_push_data(sig_in, &value, sizeof(value), -1);
         value += 0.05f;
         if (value > 1.0f)
             value -= 2.0f;
