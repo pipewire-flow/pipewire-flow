@@ -20,7 +20,7 @@ static void noop_process_cb(struct pwf_filter* filter, struct pwf_filter_port_bu
     (void)user_data;
 }
 
-static void on_error(struct pwf_filter* filter, struct pwf_filter_port* port, int error_code, void* user_data)
+static void on_error(struct pwf_filter* filter, struct pwf_filter_port* port, enum pwf_error error_code, void* user_data)
 {
     (void)filter;
     (void)user_data;

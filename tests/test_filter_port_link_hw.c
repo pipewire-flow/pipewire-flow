@@ -129,7 +129,7 @@ static void test_video_link(const char* camera, const char* mic)
 
     /* Re-linking an already-linked port is rejected, and unlinking makes
      * the port reusable. */
-    PWF_ASSERT_EQ(pwf_filter_port_link(video_in, camera), PWF_ERR_INVALID_ARG);
+    PWF_ASSERT_EQ(pwf_filter_port_link(video_in, camera), PWF_ERR_INVALID_STATE);
     PWF_ASSERT_EQ(pwf_filter_port_unlink(video_in), PWF_OK);
     PWF_ASSERT_EQ(pwf_filter_port_unlink(video_in), PWF_ERR_NOT_CONFIGURED);
     PWF_ASSERT_EQ(pwf_filter_port_link(video_in, camera), PWF_OK);

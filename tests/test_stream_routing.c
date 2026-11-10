@@ -85,7 +85,7 @@ static void test_mode_is_fixed_after_connect(void)
 
     PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_set_audio_config(s, &cfg), PWF_OK);
-    PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, true), PWF_ERR_INVALID_ARG);
+    PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, true), PWF_ERR_INVALID_STATE);
 
     pwf_stream_destroy(s);
 }
@@ -100,8 +100,8 @@ static void test_mode_is_fixed_after_video_connect(void)
     struct pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
 
     PWF_ASSERT_EQ(pwf_stream_set_video_config(s, &cfg), PWF_OK);
-    PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_ERR_INVALID_ARG);
-    PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, true), PWF_ERR_INVALID_ARG);
+    PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_ERR_INVALID_STATE);
+    PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, true), PWF_ERR_INVALID_STATE);
     PWF_ASSERT(((struct pwf_stream*)s)->autoconnect); /* unchanged by the refusals */
 
     pwf_stream_destroy(s);
@@ -112,13 +112,13 @@ static void test_hint_and_manual_are_exclusive(void)
 {
     struct pwf_stream* a = make_capture();
     PWF_ASSERT_EQ(pwf_stream_set_target(a, "some-device"), PWF_OK);
-    PWF_ASSERT_EQ(pwf_stream_set_autoconnect(a, false), PWF_ERR_INVALID_ARG);
+    PWF_ASSERT_EQ(pwf_stream_set_autoconnect(a, false), PWF_ERR_INVALID_STATE);
     PWF_ASSERT(((struct pwf_stream*)a)->autoconnect); /* unchanged by the refusal */
     pwf_stream_destroy(a);
 
     struct pwf_stream* b = make_capture();
     PWF_ASSERT_EQ(pwf_stream_set_autoconnect(b, false), PWF_OK);
-    PWF_ASSERT_EQ(pwf_stream_set_target(b, "some-device"), PWF_ERR_INVALID_ARG);
+    PWF_ASSERT_EQ(pwf_stream_set_target(b, "some-device"), PWF_ERR_INVALID_STATE);
     PWF_ASSERT(((struct pwf_stream*)b)->target == NULL); /* unchanged by the refusal */
     /* Clearing a target is not naming one, so it stays allowed. */
     PWF_ASSERT_EQ(pwf_stream_set_target(b, NULL), PWF_OK);
@@ -133,7 +133,7 @@ static void test_link_ordering_and_mode(void)
     struct pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
     PWF_ASSERT_EQ(pwf_stream_set_audio_config(auto_s, &cfg), PWF_OK);
     /* autoconnect is on: refused on the mode, before anything is looked up */
-    PWF_ASSERT_EQ(pwf_stream_link(auto_s, "some-device"), PWF_ERR_INVALID_ARG);
+    PWF_ASSERT_EQ(pwf_stream_link(auto_s, "some-device"), PWF_ERR_INVALID_STATE);
     pwf_stream_destroy(auto_s);
 
     struct pwf_stream* s = make_capture();

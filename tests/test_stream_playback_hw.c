@@ -69,7 +69,7 @@ static void on_fill(struct pwf_stream* stream, struct pwf_stream_playback_buffer
     }
 }
 
-static void on_error(struct pwf_stream* stream, int error_code, void* user_data)
+static void on_error(struct pwf_stream* stream, enum pwf_error error_code, void* user_data)
 {
     (void)stream;
     struct counters* c = user_data;
