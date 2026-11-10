@@ -210,7 +210,7 @@ PWF_API int pwf_stream_get_target_list(struct pwf_stream* stream, struct pwf_tar
  * @param[out] out     Filled with up to `out_len` formats, or NULL to only count them.
  * @param[in]  out_len Capacity of `out`.
  * @param[out] found   The format count actually available, which may exceed `out_len` if it was too small; 0 on failure. A device reporting no format this library can name is PWF_OK with 0, not an error.
- * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL or non-video stream, a NULL `found`, or no target to read, PWF_ERR_NOT_FOUND for a target naming no node, PWF_ERR_IN_CALLBACK from inside a callback, PWF_ERR_TIMEOUT when the query does not answer in time, or PWF_ERR_CONNECT_FAILED when it fails.
+ * @return PWF_OK, PWF_ERR_INVALID_ARG for a NULL or non-video stream or a NULL `found`, PWF_ERR_NOT_CONFIGURED when `target` is NULL and none was set, PWF_ERR_NOT_FOUND for a target naming no node, PWF_ERR_IN_CALLBACK from inside a callback, PWF_ERR_TIMEOUT when the query does not answer in time, or PWF_ERR_CONNECT_FAILED when it fails.
  */
 PWF_API int pwf_stream_get_target_video_formats(struct pwf_stream* stream, const char* target,
                                                  struct pwf_video_format_info* out, size_t out_len,
@@ -254,7 +254,7 @@ PWF_API int pwf_stream_set_autoconnect(struct pwf_stream* stream, bool enable);
  *
  * @param stream The running stream to wire, with autoconnect off.
  * @param target A node name or an object.serial.
- * @return PWF_OK, or an enum pwf_error: NOT_CONFIGURED before start, INVALID_ARG for a bad target string or channel count, INVALID_STATE with autoconnect on or for an already-linked stream, NOT_FOUND for a target naming no node, IN_CALLBACK from inside a callback, TIMEOUT when the stream's ports or a link do not appear in time, INVALID_FORMAT when a link fails to negotiate, NO_MEMORY when an allocation fails, CONNECT_FAILED when a link cannot be created.
+ * @return PWF_OK, or an enum pwf_error: NOT_CONFIGURED before start, INVALID_ARG for a bad target string, INVALID_STATE with autoconnect on or for an already-linked stream, NOT_FOUND for a target naming no node, IN_CALLBACK from inside a callback, TIMEOUT when the stream's ports or a link do not appear in time, INVALID_FORMAT when the target has too few channels or a link fails to negotiate, NO_MEMORY when an allocation fails, CONNECT_FAILED when a link cannot be created.
  */
 PWF_API int pwf_stream_link(struct pwf_stream* stream, const char* target);
 

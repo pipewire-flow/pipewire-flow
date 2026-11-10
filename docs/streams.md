@@ -356,8 +356,8 @@ log output.
 | --- | --- | --- |
 | `PWF_ERR_INVALID_ARG` | A NULL or out-of-range argument, or a call this kind of stream or port never accepts | Fix the call |
 | `PWF_ERR_CONNECT_FAILED` | PipeWire could not be reached, or would not create the stream, link or query | Check that the daemon is running |
-| `PWF_ERR_INVALID_FORMAT` | A format the library cannot name, or a link whose formats do not negotiate | Pick a format the target offers |
-| `PWF_ERR_NOT_CONFIGURED` | A required earlier step is missing: a format before start, start before link, a link before unlink | Make that call first |
+| `PWF_ERR_INVALID_FORMAT` | A format the library cannot name, a link whose formats do not negotiate, or a target with too few channels | Pick a format or target that fits |
+| `PWF_ERR_NOT_CONFIGURED` | A required earlier step is missing: a format before start, start before link, a link before unlink, a target before asking for its formats | Make that call first |
 | `PWF_ERR_SOURCE_UNAVAILABLE` | Reported to the error callback when the source goes away or cannot provide the requested memory | Re-route or reconfigure |
 | `PWF_ERR_IN_CALLBACK` | The call was made inside one of the object's own callbacks | Make it after the callback returns |
 | `PWF_ERR_NOT_FOUND` | No node in the graph matches the target | List the targets again |
