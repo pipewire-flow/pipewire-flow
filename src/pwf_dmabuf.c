@@ -2,6 +2,21 @@
 
 #include "pwf_dmabuf_internal.h"
 
+bool pwf_buffer_opts_valid(const struct pwf_buffer_opts* opts)
+{
+    if (!opts)
+        return true;
+    if (opts->memory != PWF_BUFFER_MEMORY_AUTO && opts->memory != PWF_BUFFER_MEMORY_DMABUF)
+        return false;
+    if (opts->flags != 0)
+        return false;
+    for (size_t i = 0; i < sizeof(opts->reserved) / sizeof(opts->reserved[0]); i++) {
+        if (opts->reserved[i] != 0)
+            return false;
+    }
+    return true;
+}
+
 bool pwf_dmabuf_buffer_present(struct spa_buffer* b)
 {
     if (!b || b->n_datas == 0)

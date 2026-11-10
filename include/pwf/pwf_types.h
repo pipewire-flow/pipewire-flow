@@ -79,14 +79,31 @@ struct pwf_video_config {
 };
 
 /**
- * @brief Selects a video port/stream's buffer memory.
+ * @brief Selects the memory backing a stream's or port's buffers.
  *
  * AUTO is the default (graph-selected, normally CPU-mapped). DMABUF
- * negotiates file descriptors instead of a CPU buffer.
+ * negotiates file descriptors instead of a CPU buffer; only video accepts
+ * it today.
  */
-enum pwf_port_memory {
-    PWF_PORT_MEMORY_AUTO   = 0, /**< Graph-selected, normally CPU-mapped. */
-    PWF_PORT_MEMORY_DMABUF = 1  /**< Negotiate DMABUF file descriptors. */
+enum pwf_buffer_memory {
+    PWF_BUFFER_MEMORY_AUTO   = 0, /**< Graph-selected, normally CPU-mapped. */
+    PWF_BUFFER_MEMORY_DMABUF = 1  /**< Negotiate DMABUF file descriptors. */
+};
+
+/**
+ * @brief How a stream or port wants its buffers delivered, as opposed to
+ *        the media format its config struct describes.
+ *
+ * Shared by pwf_stream_set_video_config_ex() and
+ * pwf_filter_add_video_port_ex(). A NULL or zeroed struct means AUTO, the
+ * behavior of the matching non-_ex call. Zero-initialize it: anything this
+ * version does not define is rejected, which leaves those values free for
+ * later versions.
+ */
+struct pwf_buffer_opts {
+    enum pwf_buffer_memory memory; /**< AUTO (default) or DMABUF; any other value is rejected. */
+    uint32_t flags;                /**< Must be zero, or the call is rejected; reserved for future flags. */
+    uint64_t reserved[4];          /**< Must be zero, or the call is rejected; reserved for future options. */
 };
 
 /**

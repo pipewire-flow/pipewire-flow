@@ -287,22 +287,11 @@ PWF_API int pwf_stream_set_audio_config(struct pwf_stream* stream, const struct 
 PWF_API int pwf_stream_set_video_config(struct pwf_stream* stream, const struct pwf_video_config* config);
 
 /**
- * @brief Per-stream DMABUF options.
- *
- * A NULL or zeroed struct means AUTO, i.e. the behavior of
- * pwf_stream_set_video_config().
- */
-struct pwf_stream_dmabuf_opts {
-    enum pwf_port_memory memory; /**< AUTO (default) or DMABUF; any other value is rejected. */
-    uint32_t reserved[2];        /**< Must be zero, or the call is rejected; reserved for future options. Zero-initialize the struct. */
-};
-
-/**
  * @brief Configures video format before starting a video capture stream,
  *        with options.
  *
  * Equivalent to pwf_stream_set_video_config() when `opts` is NULL. With
- * opts->memory == PWF_PORT_MEMORY_DMABUF, the stream negotiates DMABUF
+ * opts->memory == PWF_BUFFER_MEMORY_DMABUF, the stream negotiates DMABUF
  * frames: pwf_stream_buffer.data is NULL for each delivered frame and
  * planes are read via pwf_stream_buffer_get_dmabuf_planes(). Video capture only —
  * the same type/direction rejection as pwf_stream_set_video_config()
@@ -315,17 +304,18 @@ struct pwf_stream_dmabuf_opts {
  * source is lost after connecting. The stream delivers no frames until
  * reconfigured without DMABUF.
  *
- * config->pixel_format == "MJPG" combined with DMABUF is rejected right
- * away with PWF_ERR_INVALID_ARG instead: that combination never
- * works, so it fails immediately rather than through the async path above.
+ * A compressed config->pixel_format (MJPG or H264) combined with DMABUF is
+ * rejected right away with PWF_ERR_INVALID_ARG instead: that combination
+ * never works, so it fails immediately rather than through the async path
+ * above.
  *
  * @param stream The stream to configure; must not have started yet.
  * @param config The requested width, height, pixel format, and frame rate.
- * @param opts   DMABUF options, or NULL for AUTO.
- * @return PWF_OK, PWF_ERR_INVALID_ARG (NULL stream/config, not a video-capture stream, MJPG requested with DMABUF, or an `opts` with a nonzero reserved field or an unknown memory value), PWF_ERR_INVALID_FORMAT, PWF_ERR_IN_CALLBACK (from inside a callback), or PWF_ERR_CONNECT_FAILED.
+ * @param opts   Buffer delivery options, or NULL for AUTO.
+ * @return PWF_OK, PWF_ERR_INVALID_ARG (NULL stream/config, not a video-capture stream, a compressed format requested with DMABUF, or an `opts` with a nonzero flags or reserved field or an unknown memory value), PWF_ERR_INVALID_FORMAT, PWF_ERR_IN_CALLBACK (from inside a callback), or PWF_ERR_CONNECT_FAILED.
  */
 PWF_API int pwf_stream_set_video_config_ex(struct pwf_stream* stream, const struct pwf_video_config* config,
-                                            const struct pwf_stream_dmabuf_opts* opts);
+                                            const struct pwf_buffer_opts* opts);
 
 /**
  * @brief Fills up to `planes_len` entries of `planes` with the DMABUF

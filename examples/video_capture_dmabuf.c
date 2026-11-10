@@ -51,7 +51,7 @@ int main(void)
     pwf_stream_set_error_callback(stream, on_error);
 
     struct pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
-    struct pwf_stream_dmabuf_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_buffer_opts opts = { .memory = PWF_BUFFER_MEMORY_DMABUF };
     if (pwf_stream_set_video_config_ex(stream, &cfg, &opts) != PWF_OK) {
         fprintf(stderr, "failed to request DMABUF video format\n");
         pwf_stream_destroy(stream);

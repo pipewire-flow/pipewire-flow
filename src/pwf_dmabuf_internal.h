@@ -10,6 +10,11 @@
 
 #include "pwf/pwf_stream.h"
 
+/* Whether every field of `opts` is one this version defines; NULL is valid.
+ * Anything else is refused rather than ignored, so a later version can give
+ * the flags, reserved words and new memory values a meaning. */
+bool pwf_buffer_opts_valid(const struct pwf_buffer_opts* opts);
+
 /* Whether `b`'s first plane is DMABUF-backed. This is the "buffer
  * present" test for a DMABUF port or stream, whose data pointer is
  * always NULL. Shared by pwf_filter and pwf_stream. */
