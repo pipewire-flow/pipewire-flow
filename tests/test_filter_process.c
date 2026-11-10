@@ -123,7 +123,7 @@ int main(void)
     PWF_ASSERT(dmabuf_mixed != NULL);
 
     PWF_ASSERT(pwf_filter_add_audio_port(dmabuf_mixed, PWF_FILTER_PORT_INPUT, &cfg) != NULL);
-    struct pwf_filter_port_opts dmabuf_opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_buffer_opts dmabuf_opts = { .memory = PWF_BUFFER_MEMORY_DMABUF };
     PWF_ASSERT(pwf_filter_add_video_port_ex(dmabuf_mixed, PWF_FILTER_PORT_INPUT, &vcfg, &dmabuf_opts) != NULL);
     PWF_ASSERT(pwf_filter_add_signal_port(dmabuf_mixed, PWF_FILTER_PORT_INPUT) != NULL);
 

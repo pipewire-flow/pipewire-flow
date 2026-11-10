@@ -80,7 +80,7 @@ int main(void)
     PWF_ASSERT(filter != NULL);
 
     struct pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "RGB", .fps = 30 };
-    struct pwf_filter_port_opts dmabuf_opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_buffer_opts dmabuf_opts = { .memory = PWF_BUFFER_MEMORY_DMABUF };
 
     /* DMABUF is accepted on a video INPUT port. */
     struct pwf_filter_port* dmabuf_in =
@@ -98,13 +98,15 @@ int main(void)
     struct pwf_video_config h264_cfg = { .width = 640, .height = 480, .pixel_format = "H264", .fps = 30 };
     PWF_ASSERT(pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &h264_cfg, &dmabuf_opts) == NULL);
 
-    /* Options this version does not define are refused, not ignored: a
-     * nonzero reserved word or an unknown memory value, with either memory. */
-    struct pwf_filter_port_opts bad_reserved0 = { .memory = PWF_PORT_MEMORY_DMABUF, .reserved = { 1, 0 } };
+    /* Options this version does not define are refused, not ignored:
+     * nonzero flags, a nonzero reserved word or an unknown memory value. */
+    struct pwf_buffer_opts bad_reserved0 = { .memory = PWF_BUFFER_MEMORY_DMABUF, .reserved = { 1, 0 } };
     PWF_ASSERT(pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &cfg, &bad_reserved0) == NULL);
-    struct pwf_filter_port_opts bad_reserved1 = { .memory = PWF_PORT_MEMORY_AUTO, .reserved = { 0, 1 } };
-    PWF_ASSERT(pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &cfg, &bad_reserved1) == NULL);
-    struct pwf_filter_port_opts bad_memory = { .memory = (enum pwf_port_memory)2 };
+    struct pwf_buffer_opts bad_reserved3 = { .memory = PWF_BUFFER_MEMORY_AUTO, .reserved = { 0, 0, 0, 1 } };
+    PWF_ASSERT(pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &cfg, &bad_reserved3) == NULL);
+    struct pwf_buffer_opts bad_flags = { .memory = PWF_BUFFER_MEMORY_AUTO, .flags = 1 };
+    PWF_ASSERT(pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &cfg, &bad_flags) == NULL);
+    struct pwf_buffer_opts bad_memory = { .memory = (enum pwf_buffer_memory)2 };
     PWF_ASSERT(pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &cfg, &bad_memory) == NULL);
 
     /* opts == NULL is exactly the non-_ex call: a normal CPU video port. */

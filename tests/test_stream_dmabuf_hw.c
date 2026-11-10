@@ -82,7 +82,7 @@ static void check_multiplane_format(const char* camera, const char* pixel_format
 
     pwf_stream_set_autoconnect(s, false);
     struct pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = pixel_format, .fps = 30 };
-    struct pwf_stream_dmabuf_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_buffer_opts opts = { .memory = PWF_BUFFER_MEMORY_DMABUF };
     if (pwf_stream_set_video_config_ex(s, &cfg, &opts) != PWF_OK || pwf_stream_start(s) != PWF_OK ||
         pwf_stream_link(s, camera) != PWF_OK) {
         printf("%s: camera rejected the request, skipping\n", pixel_format);
@@ -124,7 +124,7 @@ int main(void)
     PWF_ASSERT_EQ(pwf_stream_set_autoconnect(stream, false), PWF_OK);
 
     struct pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
-    struct pwf_stream_dmabuf_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_buffer_opts opts = { .memory = PWF_BUFFER_MEMORY_DMABUF };
     PWF_ASSERT_EQ(pwf_stream_set_video_config_ex(stream, &cfg, &opts), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_start(stream), PWF_OK);
     PWF_ASSERT_EQ(pwf_stream_link(stream, camera), PWF_OK);
