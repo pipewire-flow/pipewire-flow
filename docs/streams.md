@@ -74,7 +74,7 @@ The count comes back through a parameter rather than the return value
 because this call talks to the server, so it can fail for reasons that have
 nothing to do with how many targets exist. An empty graph is
 `PWF_OK` with `*found` 0; an unreachable one is an error. Queries
-that only read buffers already delivered — `pwf_stream_get_dmabuf_planes()`
+that only read buffers already delivered — `pwf_stream_buffer_get_dmabuf_planes()`
 and the filter's event and DMABUF readers — cannot fail that way, and keep
 returning their count directly.
 
@@ -167,6 +167,7 @@ struct pwf_stream_buffer {
                     used by the underlying SPA node, e.g. ALSA or
                     V4L2), or -1 if the buffer had no timestamp
                     metadata. */
+    struct pwf_stream* stream; /* the stream this buffer was delivered on */
 };
 ```
 
@@ -316,14 +317,14 @@ struct pwf_stream_dmabuf_opts { enum pwf_port_memory memory; };
 
 int pwf_stream_set_video_config_ex(struct pwf_stream* stream, const struct pwf_video_config* config,
                                     const struct pwf_stream_dmabuf_opts* opts);
-size_t pwf_stream_get_dmabuf_planes(struct pwf_stream* stream, struct pwf_dmabuf_plane* planes, size_t planes_len);
+size_t pwf_stream_buffer_get_dmabuf_planes(const struct pwf_stream_buffer* buf, struct pwf_dmabuf_plane* planes, size_t planes_len);
 ```
 
 `pwf_stream_set_video_config_ex()` with `opts->memory == PWF_PORT_MEMORY_DMABUF`
 requests DMABUF-capable capture; `opts == NULL` is exactly
 `pwf_stream_set_video_config()`, unchanged. On a DMABUF stream every
 delivered `pwf_stream_buffer.data` is NULL — read the frame's planes with
-`pwf_stream_get_dmabuf_planes()`, which returns the plane count and fills
+`pwf_stream_buffer_get_dmabuf_planes()`, which returns the plane count and fills
 `fd`/`offset`/`stride`/`size` per plane (one for RGB/YUYV, more for planar
 formats like NV12/I420). It returns 0 for a non-DMABUF stream, never
 fabricating an fd, and the `fd` is borrowed for the callback only. If the
