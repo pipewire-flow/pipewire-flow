@@ -18,8 +18,8 @@ struct pwf_filter_port* pwf_filter_add_audio_port(struct pwf_filter* filter, enu
 struct pwf_filter_port* pwf_filter_add_video_port(struct pwf_filter* filter, enum pwf_filter_port_direction direction, const struct pwf_video_config* config);
 struct pwf_filter_port* pwf_filter_add_signal_port(struct pwf_filter* filter, enum pwf_filter_port_direction direction);
 struct pwf_filter_port* pwf_filter_add_event_port(struct pwf_filter* filter, enum pwf_filter_port_direction direction);
-enum pwf_data_type pwf_filter_port_get_type(struct pwf_filter_port* port);
-int pwf_filter_push_port_data(struct pwf_filter* filter, struct pwf_filter_port* port, const void* data, size_t size, int64_t pts);
+enum pwf_data_type pwf_filter_port_get_type(const struct pwf_filter_port* port);
+int pwf_filter_port_push_data(struct pwf_filter_port* port, const void* data, size_t size, int64_t pts);
 int pwf_filter_start(struct pwf_filter* filter);
 int pwf_filter_stop(struct pwf_filter* filter, bool drain);
 void pwf_filter_destroy(struct pwf_filter* filter);
@@ -29,7 +29,7 @@ A filter starts empty; ports are added one at a time (each as input or
 output, reusing the same config structs as `pwf_stream` for audio/video),
 and its `pwf_filter_process_func_t` is invoked once per cycle with every
 port's buffer together, so the callback can read multiple inputs and
-write one output in a single synchronized point. `pwf_filter_push_port_data()`
+write one output in a single synchronized point. `pwf_filter_port_push_data()`
 lets application code (for example, a `pwf_stream` capture callback) feed
 a filter's input port directly, with no PipeWire-level link involved. It
 is callable from any thread, including from inside the processing
@@ -44,7 +44,7 @@ added as.
 Each input port's `struct pwf_filter_port_buffer` also carries `pts`: the
 buffer's capture timestamp in nanoseconds (from the underlying SPA
 node's clock, or from the `pts` a caller passed to
-`pwf_filter_push_port_data()`), or -1 if unavailable. It's always -1 on
+`pwf_filter_port_push_data()`), or -1 if unavailable. It's always -1 on
 output ports and on event ports.
 
 **Finishing cleanly.** `pwf_filter_stop(filter, false)` pauses immediately,
@@ -74,14 +74,14 @@ callback:
   through a small accessor API instead of a raw buffer:
 
   ```c
-  size_t pwf_filter_port_get_event_count(struct pwf_filter_port* port);
-  int pwf_filter_port_get_event(struct pwf_filter_port* port, size_t index, struct pwf_event* out);
+  size_t pwf_filter_port_get_event_count(const struct pwf_filter_port* port);
+  int pwf_filter_port_get_event(const struct pwf_filter_port* port, size_t index, struct pwf_event* out);
   int pwf_filter_port_push_event(struct pwf_filter_port* port, const struct pwf_event* event);
   ```
 
   On an input event port, `pwf_filter_port_push_event()` stages an event
   for delivery on the next cycle (the event-port equivalent of
-  `pwf_filter_push_port_data()`); on an output event port, it must be
+  `pwf_filter_port_push_data()`); on an output event port, it must be
   called from within the processing callback and publishes the event
   when that cycle ends. Neither the caller nor the library ever
   constructs or parses a PipeWire/SPA POD directly. An item another
@@ -104,7 +104,7 @@ struct pwf_dmabuf_plane { int fd; uint32_t offset; uint32_t stride; uint32_t siz
 
 struct pwf_filter_port* pwf_filter_add_video_port_ex(struct pwf_filter* filter, enum pwf_filter_port_direction direction,
                                                      const struct pwf_video_config* config, const struct pwf_filter_port_opts* opts);
-size_t pwf_filter_port_get_dmabuf_planes(const struct pwf_filter_port_buffer* buf, struct pwf_dmabuf_plane* planes, size_t planes_len);
+size_t pwf_filter_port_buffer_get_dmabuf_planes(const struct pwf_filter_port_buffer* buf, struct pwf_dmabuf_plane* planes, size_t planes_len);
 int pwf_filter_port_set_hold(struct pwf_filter_port* port, bool enable);
 int pwf_filter_set_period_hint(struct pwf_filter* filter, uint32_t max_period_ns);
 ```
@@ -114,7 +114,7 @@ int pwf_filter_set_period_hint(struct pwf_filter* filter, uint32_t max_period_ns
   negotiate DMABUF frames (import-only; the source allocates, the filter
   consumes the fd). `opts == NULL` is exactly `pwf_filter_add_video_port()`.
   On such a port the buffer's `data` is NULL; read the frame's planes with
-  `pwf_filter_port_get_dmabuf_planes()`, which returns the plane count and fills
+  `pwf_filter_port_buffer_get_dmabuf_planes()`, which returns the plane count and fills
   `fd`/`offset`/`stride`/`size` per plane. It returns 0 for a non-DMABUF
   port, never fabricating an fd. If the linked source cannot provide DMABUF,
   the port simply delivers no buffers and the condition is logged — there is
@@ -136,7 +136,7 @@ int pwf_filter_set_period_hint(struct pwf_filter* filter, uint32_t max_period_ns
 For the sensor-fusion pattern — a fast source setting the cycle while a
 slower DMABUF camera is held between its frames — the fast source must be a
 real, hardware-clocked PipeWire node, not application-pushed data
-(`pwf_filter_push_port_data()` stages values but does not drive the graph).
+(`pwf_filter_port_push_data()` stages values but does not drive the graph).
 A capture device is the practical driver.
 
 Link it through **signal ports** (with [`pwf_filter_port_link()`](#linking-a-port-to-a-real-device)):
