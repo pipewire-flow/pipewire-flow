@@ -111,7 +111,7 @@ static void test_video_link(const char* camera, const char* mic)
     PWF_ASSERT(filter != NULL);
 
     struct pwf_video_config cfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
-    struct pwf_filter_port_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_buffer_opts opts = { .memory = PWF_BUFFER_MEMORY_DMABUF };
     struct pwf_filter_port* video_in = pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &cfg, &opts);
     PWF_ASSERT(video_in != NULL);
     PWF_ASSERT_EQ(pwf_filter_port_set_hold(video_in, true), PWF_OK);

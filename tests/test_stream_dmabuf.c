@@ -131,7 +131,7 @@ int main(void)
     PWF_ASSERT_EQ(pwf_stream_buffer_get_dmabuf_planes(&(struct pwf_stream_buffer){ .stream = NULL }, planes, 4), 0);
 
     /* DMABUF is accepted on a video capture stream. */
-    struct pwf_stream_dmabuf_opts dmabuf_opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_buffer_opts dmabuf_opts = { .memory = PWF_BUFFER_MEMORY_DMABUF };
     PWF_ASSERT_EQ(pwf_stream_set_video_config_ex(stream, &cfg, &dmabuf_opts), PWF_OK);
     PWF_ASSERT(((struct pwf_stream*)stream)->use_dmabuf);
 
@@ -175,18 +175,20 @@ int main(void)
     PWF_ASSERT_EQ(pwf_stream_set_video_config_ex(h264, &h264_cfg, &dmabuf_opts), PWF_ERR_INVALID_ARG);
     pwf_stream_destroy(h264);
 
-    /* Options this version does not define are refused, not ignored: a
-     * nonzero reserved word or an unknown memory value, with either memory. */
+    /* Options this version does not define are refused, not ignored:
+     * nonzero flags, a nonzero reserved word or an unknown memory value. */
     struct pwf_stream* strict = pwf_stream_create(PWF_DATA_VIDEO, noop_data_cb, NULL);
     PWF_ASSERT(strict != NULL);
-    struct pwf_stream_dmabuf_opts bad_reserved0 = { .memory = PWF_PORT_MEMORY_DMABUF, .reserved = { 1, 0 } };
+    struct pwf_buffer_opts bad_reserved0 = { .memory = PWF_BUFFER_MEMORY_DMABUF, .reserved = { 1, 0 } };
     PWF_ASSERT_EQ(pwf_stream_set_video_config_ex(strict, &cfg, &bad_reserved0), PWF_ERR_INVALID_ARG);
-    struct pwf_stream_dmabuf_opts bad_reserved1 = { .memory = PWF_PORT_MEMORY_AUTO, .reserved = { 0, 1 } };
-    PWF_ASSERT_EQ(pwf_stream_set_video_config_ex(strict, &cfg, &bad_reserved1), PWF_ERR_INVALID_ARG);
-    struct pwf_stream_dmabuf_opts bad_memory = { .memory = (enum pwf_port_memory)2 };
+    struct pwf_buffer_opts bad_reserved3 = { .memory = PWF_BUFFER_MEMORY_AUTO, .reserved = { 0, 0, 0, 1 } };
+    PWF_ASSERT_EQ(pwf_stream_set_video_config_ex(strict, &cfg, &bad_reserved3), PWF_ERR_INVALID_ARG);
+    struct pwf_buffer_opts bad_flags = { .memory = PWF_BUFFER_MEMORY_AUTO, .flags = 1 };
+    PWF_ASSERT_EQ(pwf_stream_set_video_config_ex(strict, &cfg, &bad_flags), PWF_ERR_INVALID_ARG);
+    struct pwf_buffer_opts bad_memory = { .memory = (enum pwf_buffer_memory)2 };
     PWF_ASSERT_EQ(pwf_stream_set_video_config_ex(strict, &cfg, &bad_memory), PWF_ERR_INVALID_ARG);
     /* A zeroed struct is AUTO, the same as passing NULL. */
-    struct pwf_stream_dmabuf_opts zeroed = { 0 };
+    struct pwf_buffer_opts zeroed = { 0 };
     PWF_ASSERT_EQ(pwf_stream_set_video_config_ex(strict, &cfg, &zeroed), PWF_OK);
     PWF_ASSERT(!((struct pwf_stream*)strict)->use_dmabuf);
     pwf_stream_destroy(strict);

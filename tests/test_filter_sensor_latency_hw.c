@@ -189,7 +189,7 @@ static void run_bundle(const char* camera, const char* mic, const char* sensor, 
     PWF_ASSERT(filter != NULL);
 
     struct pwf_video_config vcfg = { .width = 640, .height = 480, .pixel_format = "YUYV", .fps = 30 };
-    struct pwf_filter_port_opts opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_buffer_opts opts = { .memory = PWF_BUFFER_MEMORY_DMABUF };
     b.video = pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &vcfg, &opts);
     b.mic = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
     b.temp = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);
