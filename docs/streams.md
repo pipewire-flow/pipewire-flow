@@ -313,16 +313,21 @@ a GPU import path) never has to build a `pwf_filter` just to forward one
 input:
 
 ```c
-struct pwf_stream_dmabuf_opts { enum pwf_port_memory memory; };
+struct pwf_buffer_opts {
+    enum pwf_buffer_memory memory;
+    uint32_t flags;       /* must be zero */
+    uint64_t reserved[4]; /* must be zero */
+};
 
 int pwf_stream_set_video_config_ex(struct pwf_stream* stream, const struct pwf_video_config* config,
-                                    const struct pwf_stream_dmabuf_opts* opts);
+                                    const struct pwf_buffer_opts* opts);
 size_t pwf_stream_buffer_get_dmabuf_planes(const struct pwf_stream_buffer* buf, struct pwf_dmabuf_plane* planes, size_t planes_len);
 ```
 
-`pwf_stream_set_video_config_ex()` with `opts->memory == PWF_PORT_MEMORY_DMABUF`
+`pwf_stream_set_video_config_ex()` with `opts->memory == PWF_BUFFER_MEMORY_DMABUF`
 requests DMABUF-capable capture; `opts == NULL` is exactly
-`pwf_stream_set_video_config()`, unchanged. On a DMABUF stream every
+`pwf_stream_set_video_config()`, unchanged. Zero-initialize `opts`: nonzero
+`flags` or `reserved` words are rejected. On a DMABUF stream every
 delivered `pwf_stream_buffer.data` is NULL — read the frame's planes with
 `pwf_stream_buffer_get_dmabuf_planes()`, which returns the plane count and fills
 `fd`/`offset`/`stride`/`size` per plane (one for RGB/YUYV, more for planar
