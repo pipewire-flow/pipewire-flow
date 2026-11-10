@@ -181,6 +181,11 @@ struct pwf_filter_port* pwf_filter_add_video_port_ex(struct pwf_filter* handle,
         return NULL;
     if (config->width <= 0 || config->height <= 0 || config->fps < 0)
         return NULL;
+    /* An option this version does not know is refused rather than ignored, so
+     * a later version can give the reserved words and new values a meaning. */
+    if (opts && (opts->reserved[0] != 0 || opts->reserved[1] != 0 ||
+                 (opts->memory != PWF_PORT_MEMORY_AUTO && opts->memory != PWF_PORT_MEMORY_DMABUF)))
+        return NULL;
 
     bool want_dmabuf = opts && opts->memory == PWF_PORT_MEMORY_DMABUF;
     /* DMABUF is an import-only path for video input; refuse it on output. */

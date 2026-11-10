@@ -292,8 +292,8 @@ PWF_API int pwf_stream_set_video_config(struct pwf_stream* stream, const struct 
  * pwf_stream_set_video_config().
  */
 struct pwf_stream_dmabuf_opts {
-    enum pwf_port_memory memory; /**< AUTO (default) or DMABUF. */
-    uint32_t reserved[2];        /**< Must be zero; reserved for future options. */
+    enum pwf_port_memory memory; /**< AUTO (default) or DMABUF; any other value is rejected. */
+    uint32_t reserved[2];        /**< Must be zero, or the call is rejected; reserved for future options. Zero-initialize the struct. */
 };
 
 /**
@@ -321,7 +321,7 @@ struct pwf_stream_dmabuf_opts {
  * @param stream The stream to configure; must not have started yet.
  * @param config The requested width, height, pixel format, and frame rate.
  * @param opts   DMABUF options, or NULL for AUTO.
- * @return PWF_OK, PWF_ERR_INVALID_ARG (NULL stream/config, not a video-capture stream, or MJPG requested with DMABUF), PWF_ERR_INVALID_FORMAT, PWF_ERR_IN_CALLBACK (from inside a callback), or PWF_ERR_CONNECT_FAILED.
+ * @return PWF_OK, PWF_ERR_INVALID_ARG (NULL stream/config, not a video-capture stream, MJPG requested with DMABUF, or an `opts` with a nonzero reserved field or an unknown memory value), PWF_ERR_INVALID_FORMAT, PWF_ERR_IN_CALLBACK (from inside a callback), or PWF_ERR_CONNECT_FAILED.
  */
 PWF_API int pwf_stream_set_video_config_ex(struct pwf_stream* stream, const struct pwf_video_config* config,
                                             const struct pwf_stream_dmabuf_opts* opts);
