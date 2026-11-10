@@ -291,29 +291,22 @@ int pwf_filter_port_push_event(struct pwf_filter_port* port_handle, const struct
         return staged ? PWF_OK : PWF_ERR_NO_MEMORY;
     }
 
-    /* An output port is pushed from inside the processing callback, which
-     * already runs on the loop's own thread; locking there would deadlock. */
-    bool lock = pwf_filter_processing != filter;
-    if (lock)
-        pw_thread_loop_lock(filter->conn.loop);
+    /* An output port's room exists only for the cycle being processed, and
+     * each cycle starts by dropping what is pending, so a push from anywhere
+     * else could only be lost. */
+    if (pwf_filter_processing != filter)
+        return PWF_ERR_INVALID_STATE;
 
-    if (!pwf_filter_pending_event_append(port, event)) {
-        if (lock)
-            pw_thread_loop_unlock(filter->conn.loop);
+    if (!pwf_filter_pending_event_append(port, event))
         return PWF_ERR_NO_MEMORY;
-    }
 
     /* A push must fit the output buffer this cycle dequeued, so an oversized
      * one is rejected here rather than silently truncated at encode time. */
     size_t needed = pwf_filter_event_encode(port, NULL, 0);
     if (needed > port->event_output_capacity) {
         pwf_filter_pending_event_pop_last(port);
-        if (lock)
-            pw_thread_loop_unlock(filter->conn.loop);
         return PWF_ERR_NO_SPACE;
     }
 
-    if (lock)
-        pw_thread_loop_unlock(filter->conn.loop);
     return PWF_OK;
 }
