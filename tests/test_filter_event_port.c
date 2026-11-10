@@ -29,14 +29,14 @@ static void process_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer*
 
     /* Port 1 (added second) is the output event port. Unlinked, it
      * never gets a real dequeue-able buffer (confirmed in CI), so only
-     * {OK, INVALID_ARG} are valid outcomes here — never anything else. */
+     * {OK, NO_SPACE} are valid outcomes here — never anything else. */
     if (n_buffers >= 2) {
         uint8_t note_on[3] = { 0x90, 0x3c, 0x64 };
         struct pwf_event out_ev = { .offset = 0, .kind = PWF_EVENT_MIDI, .key = NULL, .data = note_on,
                               .size = sizeof(note_on) };
         g_output_push_calls++;
         int res = pwf_filter_port_push_event(buffers[1].port, &out_ev);
-        if (res != PWF_OK && res != PWF_ERR_INVALID_ARG)
+        if (res != PWF_OK && res != PWF_ERR_NO_SPACE)
             g_output_push_unexpected++;
     }
 
