@@ -101,7 +101,7 @@ static void test_nested_filter_restores_outer(void)
     pwf_filter_destroy(inner_h);
 }
 
-/* --- push_port_data from inside the callback ------------------------- */
+/* --- port_push_data from inside the callback ------------------------- */
 
 static struct pwf_filter_port* g_push_port;
 static int g_push_result = 1;      /* 1 = never attempted */
@@ -110,6 +110,7 @@ static float g_delivered = -1.0f;
 
 static void push_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
+    (void)filter;
     (void)user_data;
     g_push_cycles++;
 
@@ -122,11 +123,11 @@ static void push_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* bu
      * take the loop lock on the data thread and deadlock. */
     if (g_push_result == 1) {
         float v = 0.5f;
-        g_push_result = pwf_filter_push_port_data(filter, g_push_port, &v, sizeof(v), 42);
+        g_push_result = pwf_filter_port_push_data(g_push_port, &v, sizeof(v), 42);
     }
 }
 
-static void test_push_port_data_from_callback(void)
+static void test_port_push_data_from_callback(void)
 {
     struct pwf_filter* handle = pwf_filter_create("pwf-test-cb-push", push_cb, NULL);
     PWF_ASSERT(handle != NULL);
@@ -162,7 +163,7 @@ static void cross_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* b
         float v = 1.5f;
         /* A different filter's loop is not the one running us, so this one
          * does take its lock — it must still succeed and not hang. */
-        g_cross_result = pwf_filter_push_port_data(g_other, g_other_port, &v, sizeof(v), -1);
+        g_cross_result = pwf_filter_port_push_data(g_other_port, &v, sizeof(v), -1);
     }
 }
 
@@ -205,7 +206,7 @@ static void test_app_thread_push_still_works(void)
      * before even while the filter's own thread is processing. */
     float v = 2.5f;
     PWF_ASSERT(pwf_filter_processing == NULL);
-    PWF_ASSERT_EQ(pwf_filter_push_port_data(handle, in, &v, sizeof(v), -1), PWF_OK);
+    PWF_ASSERT_EQ(pwf_filter_port_push_data(in, &v, sizeof(v), -1), PWF_OK);
 
     pwf_filter_stop(handle, false);
     pwf_filter_destroy(handle);
@@ -215,7 +216,7 @@ int main(void)
 {
     test_marker_set_and_restored();
     test_nested_filter_restores_outer();
-    test_push_port_data_from_callback();
+    test_port_push_data_from_callback();
     test_push_to_other_filter_from_callback();
     test_app_thread_push_still_works();
     return 0;

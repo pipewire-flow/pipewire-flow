@@ -35,7 +35,7 @@ int main(void)
     /* Pushing data into a signal input port works through the same
      * generic staging mechanism as any other port kind. */
     float samples[4] = { 0.0f, 0.25f, 0.5f, 0.75f };
-    PWF_ASSERT_EQ(pwf_filter_push_port_data(filter, sig_in, samples, sizeof(samples), -1), PWF_OK);
+    PWF_ASSERT_EQ(pwf_filter_port_push_data(sig_in, samples, sizeof(samples), -1), PWF_OK);
 
     sleep(1);
 

@@ -122,7 +122,7 @@ static void on_process(struct pwf_filter* filter, struct pwf_filter_port_buffer*
 
         if (buf->port == b->video) {
             struct pwf_dmabuf_plane plane;
-            if (pwf_filter_port_get_dmabuf_planes(buf, &plane, 1) > 0) {
+            if (pwf_filter_port_buffer_get_dmabuf_planes(buf, &plane, 1) > 0) {
                 if (buf->fresh) {
                     b->video_fresh++;
                 } else {
@@ -169,7 +169,7 @@ static void* sensor_thread(void* arg)
                 /* The block's pts is when its last sample was read, not
                  * when the block happens to be delivered — the two can
                  * differ by up to a cycle if the push lands mid-cycle. */
-                pwf_filter_push_port_data(b->filter, b->temp, batch, n * sizeof(float), last_sample_pts);
+                pwf_filter_port_push_data(b->temp, batch, n * sizeof(float), last_sample_pts);
                 n = 0;
             }
         }

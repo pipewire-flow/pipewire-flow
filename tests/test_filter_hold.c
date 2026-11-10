@@ -84,8 +84,8 @@ int main(void)
     /* Phase B: one push to each port. Exactly one fresh delivery per push;
      * the hold port then re-presents that buffer on later cycles. */
     float v1 = 0.25f;
-    PWF_ASSERT_EQ(pwf_filter_push_port_data(filter, g_hold_port, &v1, sizeof(v1), 1000), PWF_OK);
-    PWF_ASSERT_EQ(pwf_filter_push_port_data(filter, g_nohold_port, &v1, sizeof(v1), 1000), PWF_OK);
+    PWF_ASSERT_EQ(pwf_filter_port_push_data(g_hold_port, &v1, sizeof(v1), 1000), PWF_OK);
+    PWF_ASSERT_EQ(pwf_filter_port_push_data(g_nohold_port, &v1, sizeof(v1), 1000), PWF_OK);
     usleep(500000);
 
     PWF_ASSERT_EQ(g_hold_fresh, 1);
@@ -100,7 +100,7 @@ int main(void)
 
     /* Phase C: a new push advances seq and updates the held payload. */
     float v2 = 0.75f;
-    PWF_ASSERT_EQ(pwf_filter_push_port_data(filter, g_hold_port, &v2, sizeof(v2), 2000), PWF_OK);
+    PWF_ASSERT_EQ(pwf_filter_port_push_data(g_hold_port, &v2, sizeof(v2), 2000), PWF_OK);
     usleep(500000);
 
     PWF_ASSERT_EQ(g_hold_fresh, 2);
