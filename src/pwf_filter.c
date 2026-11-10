@@ -152,13 +152,16 @@ static void pwf_filter_teardown(struct pwf_filter* filter)
 
 struct pwf_filter* pwf_filter_create(const char* name, pwf_filter_process_func_t callback, void* user_data)
 {
-    if (!callback)
+    if (!callback) {
+        pwf_log_error("%s: callback is NULL", __func__);
         return NULL;
+    }
 
     pwf_pw_global_init();
 
     struct pwf_filter* filter = calloc(1, sizeof(*filter));
     if (!filter) {
+        pwf_log_error("filter: out of memory allocating the filter");
         pwf_pw_global_deinit();
         return NULL;
     }
@@ -170,6 +173,7 @@ struct pwf_filter* pwf_filter_create(const char* name, pwf_filter_process_func_t
     if (name && *name) {
         filter->name = strdup(name);
         if (!filter->name) {
+            pwf_log_error("filter: out of memory copying the filter name");
             free(filter);
             pwf_pw_global_deinit();
             return NULL;
