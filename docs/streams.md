@@ -44,6 +44,11 @@ pausing, so nothing is lost. If the device disappears mid-drain, a warning
 is logged and the stream stops anyway after a few seconds rather than
 blocking forever.
 
+Setting the format is what connects the stream, so setting it again replaces
+that connection. It returns `PWF_ERR_INVALID_STATE` while the stream runs or
+still has links: stop and unlink it first. A stream that lost its source is
+already stopped, so it can be reconfigured right away.
+
 ### Choosing a source
 
 By default a stream auto-connects to PipeWire's default source for its
@@ -357,7 +362,7 @@ log output.
 | `PWF_ERR_NOT_FOUND` | No node in the graph matches the target | List the targets again |
 | `PWF_ERR_TIMEOUT` | PipeWire did not answer, or a link did not negotiate, in time | Retry the call |
 | `PWF_ERR_NO_MEMORY` | A memory allocation failed | Free memory, or give up |
-| `PWF_ERR_INVALID_STATE` | The arguments are fine, but the object is past the point where the call applies or in the other routing mode: a setting changed after connect or start, a second link, a target while autoconnect is off | Make the call earlier, or unlink / clear the target first |
+| `PWF_ERR_INVALID_STATE` | The arguments are fine, but the object's current state or routing mode rules the call out: a setting changed after connect or start, a second link, a target while autoconnect is off, an output event pushed outside the processing callback | Make the call earlier, or stop, unlink or clear the target first |
 | `PWF_ERR_NO_SPACE` | An event pushed to an output port does not fit what is left of this cycle's buffer | Push less this cycle, or try again on a later one |
 
 Later releases may append codes, so treat one you do not recognize as a
