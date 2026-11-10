@@ -41,7 +41,7 @@ int main(void)
     PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
 
     /* Rejected after start (it is a connect-time node property). */
-    PWF_ASSERT_EQ(pwf_filter_set_period_hint(filter, 5000000), PWF_ERR_INVALID_ARG);
+    PWF_ASSERT_EQ(pwf_filter_set_period_hint(filter, 5000000), PWF_ERR_INVALID_STATE);
 
     pwf_filter_stop(filter, false);
     pwf_filter_destroy(filter);

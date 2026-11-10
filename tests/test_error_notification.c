@@ -18,7 +18,7 @@ static void noop_data_cb(struct pwf_stream* stream, const struct pwf_stream_buff
     (void)user_data;
 }
 
-static void on_error(struct pwf_stream* stream, int error_code, void* user_data)
+static void on_error(struct pwf_stream* stream, enum pwf_error error_code, void* user_data)
 {
     (void)stream;
     (void)user_data;

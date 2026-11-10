@@ -86,7 +86,7 @@ static void sink_cb(struct pwf_filter* filter, struct pwf_filter_port_buffer* bu
     }
 }
 
-static void sink_error_cb(struct pwf_filter* filter, struct pwf_filter_port* port, int error_code, void* user_data)
+static void sink_error_cb(struct pwf_filter* filter, struct pwf_filter_port* port, enum pwf_error error_code, void* user_data)
 {
     (void)filter;
     (void)port;

@@ -41,7 +41,7 @@ static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* b
         c->saw_pts++;
 }
 
-static void on_error(struct pwf_stream* stream, int error_code, void* user_data)
+static void on_error(struct pwf_stream* stream, enum pwf_error error_code, void* user_data)
 {
     (void)stream;
     struct counters* c = user_data;
@@ -135,7 +135,7 @@ static void on_mjpg_data(struct pwf_stream* stream, const struct pwf_stream_buff
         c->saw_different_size = true;
 }
 
-static void on_mjpg_error(struct pwf_stream* stream, int error_code, void* user_data)
+static void on_mjpg_error(struct pwf_stream* stream, enum pwf_error error_code, void* user_data)
 {
     (void)stream;
     struct mjpg_counters* c = user_data;

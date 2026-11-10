@@ -142,7 +142,7 @@ static void exercise(struct pwf_stream* s, const char* device)
     PWF_ASSERT_EQ(links_to(device), after);
 
     /* Linking again while linked is refused, and leaves the links alone. */
-    PWF_ASSERT_EQ(pwf_stream_link(s, device), PWF_ERR_INVALID_ARG);
+    PWF_ASSERT_EQ(pwf_stream_link(s, device), PWF_ERR_INVALID_STATE);
     PWF_ASSERT_EQ(links_to(device), after);
 
     /* Releasing puts the graph back where it started. */

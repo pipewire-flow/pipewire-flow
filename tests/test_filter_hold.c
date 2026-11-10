@@ -72,7 +72,7 @@ int main(void)
     PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
 
     /* Setting hold after start is rejected. */
-    PWF_ASSERT_EQ(pwf_filter_port_set_hold(g_hold_port, true), PWF_ERR_INVALID_ARG);
+    PWF_ASSERT_EQ(pwf_filter_port_set_hold(g_hold_port, true), PWF_ERR_INVALID_STATE);
 
     /* Phase A: before any buffer, a hold port reports no buffer (not a
      * stale/invalid one) — same as a non-hold port. */
