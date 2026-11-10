@@ -156,7 +156,7 @@ int main(void)
     PWF_ASSERT_EQ(pwf_filter_port_get_event_count(ev_out), (size_t)0);
 
     uint8_t junk[4] = { 0 };
-    PWF_ASSERT_EQ(pwf_filter_push_port_data(filter, ev_in, junk, sizeof(junk), -1), PWF_ERR_INVALID_ARG);
+    PWF_ASSERT_EQ(pwf_filter_port_push_data(ev_in, junk, sizeof(junk), -1), PWF_ERR_INVALID_ARG);
 
     struct pwf_event bad_key_on_midi = { .offset = 0, .kind = PWF_EVENT_MIDI, .key = "volume", .data = NULL,
                                          .size = 0 };

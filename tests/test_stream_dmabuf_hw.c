@@ -28,6 +28,7 @@ struct counters {
 
 static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
+    (void)stream;
     struct counters* c = user_data;
     c->frames++;
     if (buf->data)
@@ -36,7 +37,7 @@ static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* b
         c->saw_pts++;
 
     struct pwf_dmabuf_plane plane;
-    if (pwf_stream_get_dmabuf_planes(stream, &plane, 1) > 0) {
+    if (pwf_stream_buffer_get_dmabuf_planes(buf, &plane, 1) > 0) {
         c->dmabuf_frames++;
         c->last_fd = plane.fd;
     }
@@ -57,12 +58,12 @@ struct plane_counters {
 
 static void on_plane_data(struct pwf_stream* stream, const struct pwf_stream_buffer* buf, void* user_data)
 {
-    (void)buf;
+    (void)stream;
     struct plane_counters* c = user_data;
     c->frames++;
 
     struct pwf_dmabuf_plane planes[4];
-    size_t n = pwf_stream_get_dmabuf_planes(stream, planes, 4);
+    size_t n = pwf_stream_buffer_get_dmabuf_planes(buf, planes, 4);
     if (n > c->max_planes)
         c->max_planes = (unsigned)n;
     if (n >= 2)

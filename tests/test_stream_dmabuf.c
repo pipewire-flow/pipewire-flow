@@ -35,7 +35,7 @@ static void test_plane_extraction(struct pwf_stream* handle)
     stream->current_dmabuf_buf = &sb;
 
     struct pwf_dmabuf_plane planes[4];
-    PWF_ASSERT_EQ(pwf_stream_get_dmabuf_planes(handle, planes, 4), (size_t)1);
+    PWF_ASSERT_EQ(pwf_stream_buffer_get_dmabuf_planes(&(struct pwf_stream_buffer){ .stream = handle }, planes, 4), (size_t)1);
     PWF_ASSERT_EQ(planes[0].fd, 42);
     PWF_ASSERT_EQ(planes[0].offset, 16u);
     PWF_ASSERT_EQ(planes[0].stride, 640u);
@@ -60,7 +60,7 @@ static void test_nv12_two_fds(struct pwf_stream* handle)
     stream->current_dmabuf_buf = &sb;
 
     struct pwf_dmabuf_plane planes[4];
-    PWF_ASSERT_EQ(pwf_stream_get_dmabuf_planes(handle, planes, 4), (size_t)2);
+    PWF_ASSERT_EQ(pwf_stream_buffer_get_dmabuf_planes(&(struct pwf_stream_buffer){ .stream = handle }, planes, 4), (size_t)2);
     PWF_ASSERT_EQ(planes[0].fd, 10);
     PWF_ASSERT_EQ(planes[0].stride, 640u);
     PWF_ASSERT_EQ(planes[1].fd, 11);
@@ -94,7 +94,7 @@ static void test_i420_shared_fd(struct pwf_stream* handle)
     stream->current_dmabuf_buf = &sb;
 
     struct pwf_dmabuf_plane planes[4];
-    PWF_ASSERT_EQ(pwf_stream_get_dmabuf_planes(handle, planes, 4), (size_t)3);
+    PWF_ASSERT_EQ(pwf_stream_buffer_get_dmabuf_planes(&(struct pwf_stream_buffer){ .stream = handle }, planes, 4), (size_t)3);
     PWF_ASSERT_EQ(planes[0].fd, 20);
     PWF_ASSERT_EQ(planes[0].offset, 0u);
     PWF_ASSERT_EQ(planes[1].fd, 20);
@@ -123,11 +123,12 @@ int main(void)
     PWF_ASSERT_EQ(pwf_stream_set_video_config(stream, &cfg), PWF_OK);
     PWF_ASSERT(!((struct pwf_stream*)stream)->use_dmabuf);
 
-    /* The accessor never fabricates a plane on a non-DMABUF stream, or for
-     * a NULL handle. */
+    /* The accessor never fabricates a plane on a non-DMABUF stream, for a
+     * NULL buffer, or for a buffer naming no stream. */
     struct pwf_dmabuf_plane planes[4];
-    PWF_ASSERT_EQ(pwf_stream_get_dmabuf_planes(stream, planes, 4), 0);
-    PWF_ASSERT_EQ(pwf_stream_get_dmabuf_planes(NULL, planes, 4), 0);
+    PWF_ASSERT_EQ(pwf_stream_buffer_get_dmabuf_planes(&(struct pwf_stream_buffer){ .stream = stream }, planes, 4), 0);
+    PWF_ASSERT_EQ(pwf_stream_buffer_get_dmabuf_planes(NULL, planes, 4), 0);
+    PWF_ASSERT_EQ(pwf_stream_buffer_get_dmabuf_planes(&(struct pwf_stream_buffer){ .stream = NULL }, planes, 4), 0);
 
     /* DMABUF is accepted on a video capture stream. */
     struct pwf_stream_dmabuf_opts dmabuf_opts = { .memory = PWF_PORT_MEMORY_DMABUF };
@@ -135,7 +136,7 @@ int main(void)
     PWF_ASSERT(((struct pwf_stream*)stream)->use_dmabuf);
 
     /* Outside a cycle (no current buffer) the accessor still returns 0. */
-    PWF_ASSERT_EQ(pwf_stream_get_dmabuf_planes(stream, planes, 4), 0);
+    PWF_ASSERT_EQ(pwf_stream_buffer_get_dmabuf_planes(&(struct pwf_stream_buffer){ .stream = stream }, planes, 4), 0);
 
     /* With a real DMABUF frame present, the accessor extracts its plane. */
     test_plane_extraction(stream);

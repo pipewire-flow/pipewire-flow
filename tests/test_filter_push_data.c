@@ -36,15 +36,15 @@ int main(void)
 
     /* Pushing to an output port is rejected. */
     char dummy[4] = { 0 };
-    PWF_ASSERT_EQ(pwf_filter_push_port_data(filter, out_port, dummy, sizeof(dummy), -1), PWF_ERR_INVALID_ARG);
+    PWF_ASSERT_EQ(pwf_filter_port_push_data(out_port, dummy, sizeof(dummy), -1), PWF_ERR_INVALID_ARG);
 
     PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
 
     /* Only the most recently pushed buffer per port is kept. */
     char first[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
     char second[16] = { 0 };
-    PWF_ASSERT_EQ(pwf_filter_push_port_data(filter, in_port, first, sizeof(first), 1000), PWF_OK);
-    PWF_ASSERT_EQ(pwf_filter_push_port_data(filter, in_port, second, sizeof(second), 2000), PWF_OK);
+    PWF_ASSERT_EQ(pwf_filter_port_push_data(in_port, first, sizeof(first), 1000), PWF_OK);
+    PWF_ASSERT_EQ(pwf_filter_port_push_data(in_port, second, sizeof(second), 2000), PWF_OK);
 
     sleep(1);
 

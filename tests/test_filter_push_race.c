@@ -123,7 +123,7 @@ static void test_delivered_data_is_stable(void)
         /* Sizes vary, so the push side regrows its buffer while capacity catches up. */
         uint8_t value = (uint8_t)(1 + (i * 37) % 255);
         memset(buf, value, size_for(value));
-        PWF_ASSERT_EQ(pwf_filter_push_port_data(filter, in, buf, size_for(value), i), PWF_OK);
+        PWF_ASSERT_EQ(pwf_filter_port_push_data(in, buf, size_for(value), i), PWF_OK);
         usleep(300 + (i % 7) * 300);
     }
 

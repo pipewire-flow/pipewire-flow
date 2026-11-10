@@ -84,6 +84,7 @@ struct run {
 
 static void on_process(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
 {
+    (void)filter;
     struct run* r = user_data;
     r->cycles++;
 
@@ -106,7 +107,7 @@ static void on_process(struct pwf_filter* filter, struct pwf_filter_port_buffer*
     long milli = 0;
     if (read_millidegrees(r->sensor, &milli)) {
         float celsius = (float)milli / 1000.0f;
-        pwf_filter_push_port_data(filter, r->port, &celsius, sizeof(celsius), now_ns());
+        pwf_filter_port_push_data(r->port, &celsius, sizeof(celsius), now_ns());
     }
 }
 

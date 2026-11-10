@@ -38,7 +38,7 @@ static void on_process(struct pwf_filter* filter, struct pwf_filter_port_buffer*
 
     for (size_t i = 0; i < n_buffers; i++) {
         struct pwf_dmabuf_plane plane;
-        if (pwf_filter_port_get_dmabuf_planes(&buffers[i], &plane, 1) > 0) {
+        if (pwf_filter_port_buffer_get_dmabuf_planes(&buffers[i], &plane, 1) > 0) {
             c->dmabuf_frames++;
             c->last_fd = plane.fd;
             if (buffers[i].fresh)
