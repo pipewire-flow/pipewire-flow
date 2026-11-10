@@ -186,7 +186,7 @@ int pwf_filter_port_unlink(struct pwf_filter_port* port);
   filter's own node has to exist there first. Calling it earlier returns
   `PWF_ERR_NOT_CONFIGURED`.
 - **Input ports only**, one link at a time. Linking an already-linked port
-  returns `PWF_ERR_INVALID_ARG`; unlink first to re-target it.
+  returns `PWF_ERR_INVALID_STATE`; unlink first to re-target it.
 - **The filter owns its links** — `pwf_filter_stop()` and
   `pwf_filter_destroy()` release every link, so `pwf_filter_port_unlink()`
   is only needed to re-target a port while the filter keeps running.

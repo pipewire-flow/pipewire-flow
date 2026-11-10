@@ -262,7 +262,7 @@ unconnected.
 Automatic connection stays on unless you turn it off, so existing code is
 unaffected. The two modes are mutually exclusive: combining
 `pwf_stream_set_target()` with `pwf_stream_set_autoconnect(false)` returns
-`PWF_ERR_INVALID_ARG`, whichever you call second.
+`PWF_ERR_INVALID_STATE`, whichever you call second.
 
 To move from one mode to the other before the format connects the stream,
 clear the target first: `pwf_stream_set_target(stream, NULL)` is accepted
@@ -337,10 +337,12 @@ rejected the same way an ordinary video config is.
 
 Every call that can fail returns a `enum pwf_error`, and the filter calls
 return the same codes.
+`pwf_strerror()` turns any of them into a short English phrase for
+log output.
 
 | Code | What happened | What usually helps |
 | --- | --- | --- |
-| `PWF_ERR_INVALID_ARG` | A NULL or out-of-range argument, or a call the object's current state or routing mode does not allow | Fix the call |
+| `PWF_ERR_INVALID_ARG` | A NULL or out-of-range argument, or a call this kind of stream or port never accepts | Fix the call |
 | `PWF_ERR_CONNECT_FAILED` | PipeWire could not be reached, or would not create the stream, link or query | Check that the daemon is running |
 | `PWF_ERR_INVALID_FORMAT` | A format the library cannot name, or a link whose formats do not negotiate | Pick a format the target offers |
 | `PWF_ERR_NOT_CONFIGURED` | A required earlier step is missing: a format before start, start before link, a link before unlink | Make that call first |
@@ -349,6 +351,8 @@ return the same codes.
 | `PWF_ERR_NOT_FOUND` | No node in the graph matches the target | List the targets again |
 | `PWF_ERR_TIMEOUT` | PipeWire did not answer, or a link did not negotiate, in time | Retry the call |
 | `PWF_ERR_NO_MEMORY` | A memory allocation failed | Free memory, or give up |
+| `PWF_ERR_INVALID_STATE` | The arguments are fine, but the object is past the point where the call applies or in the other routing mode: a setting changed after connect or start, a second link, a target while autoconnect is off | Make the call earlier, or unlink / clear the target first |
+| `PWF_ERR_NO_SPACE` | An event pushed to an output port does not fit what is left of this cycle's buffer | Push less this cycle, or try again on a later one |
 
 Later releases may append codes, so treat one you do not recognize as a
 general failure.
