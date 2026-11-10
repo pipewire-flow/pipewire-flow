@@ -14,7 +14,7 @@ int main(void)
      * added without a phrase would fall through to "Unknown error" here. */
     const char* seen[16];
     size_t n = 0;
-    for (int code = PWF_OK; code >= PWF_ERR_INVALID_STATE; code--) {
+    for (int code = PWF_OK; code >= PWF_ERR_NO_SPACE; code--) {
         const char* text = pwf_strerror(code);
         PWF_ASSERT(text != NULL);
         PWF_ASSERT(*text != '\0');
@@ -27,7 +27,7 @@ int main(void)
     PWF_ASSERT_EQ(strcmp(pwf_strerror(PWF_OK), "Success"), 0);
 
     /* Values outside the enum, on either side, still give a printable string. */
-    PWF_ASSERT_EQ(strcmp(pwf_strerror(PWF_ERR_INVALID_STATE - 1), "Unknown error"), 0);
+    PWF_ASSERT_EQ(strcmp(pwf_strerror(PWF_ERR_NO_SPACE - 1), "Unknown error"), 0);
     PWF_ASSERT_EQ(strcmp(pwf_strerror(1), "Unknown error"), 0);
 
     return 0;
