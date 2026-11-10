@@ -38,7 +38,7 @@ pkg.generate(
   pipewire_flow_lib,
   name: 'pipewire-flow',
   description: 'PipeWire audio/video capture, playback and multi-port filters',
-  requires: 'libpipewire-0.3',
+  requires_private: 'libpipewire-0.3',
 )
 
 if get_option('tests')
