@@ -98,21 +98,27 @@ of a CPU-mapped buffer, and any input port can *hold* its most recent
 buffer across cycles where no new data arrives:
 
 ```c
-enum pwf_port_memory { PWF_PORT_MEMORY_AUTO, PWF_PORT_MEMORY_DMABUF };
-struct pwf_filter_port_opts { enum pwf_port_memory memory; };
+enum pwf_buffer_memory { PWF_BUFFER_MEMORY_AUTO, PWF_BUFFER_MEMORY_DMABUF };
+struct pwf_buffer_opts {
+    enum pwf_buffer_memory memory;
+    uint32_t flags;       /* must be zero */
+    uint64_t reserved[4]; /* must be zero */
+};
 struct pwf_dmabuf_plane { int fd; uint32_t offset; uint32_t stride; uint32_t size; };
 
 struct pwf_filter_port* pwf_filter_add_video_port_ex(struct pwf_filter* filter, enum pwf_filter_port_direction direction,
-                                                     const struct pwf_video_config* config, const struct pwf_filter_port_opts* opts);
+                                                     const struct pwf_video_config* config, const struct pwf_buffer_opts* opts);
 size_t pwf_filter_port_buffer_get_dmabuf_planes(const struct pwf_filter_port_buffer* buf, struct pwf_dmabuf_plane* planes, size_t planes_len);
 int pwf_filter_port_set_hold(struct pwf_filter_port* port, bool enable);
 int pwf_filter_set_period_hint(struct pwf_filter* filter, uint32_t max_period_ns);
 ```
 
 - **DMABUF import** — `pwf_filter_add_video_port_ex()` with
-  `opts->memory == PWF_PORT_MEMORY_DMABUF` makes a video input port
+  `opts->memory == PWF_BUFFER_MEMORY_DMABUF` makes a video input port
   negotiate DMABUF frames (import-only; the source allocates, the filter
   consumes the fd). `opts == NULL` is exactly `pwf_filter_add_video_port()`.
+  Zero-initialize `opts`: nonzero
+  `flags` or `reserved` words are rejected.
   On such a port the buffer's `data` is NULL; read the frame's planes with
   `pwf_filter_port_buffer_get_dmabuf_planes()`, which returns the plane count and fills
   `fd`/`offset`/`stride`/`size` per plane. It returns 0 for a non-DMABUF
