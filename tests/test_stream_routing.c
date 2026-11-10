@@ -146,6 +146,39 @@ static void test_format_is_fixed_while_running_or_linked(void)
     pwf_stream_destroy(v);
 }
 
+/* Both are read only when the format connects the stream, so naming one
+ * afterwards is refused and changes nothing; clearing stays allowed. */
+static void test_target_and_role_are_fixed_after_connect(void)
+{
+    struct pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
+    struct pwf_stream* s = make_capture();
+
+    PWF_ASSERT_EQ(pwf_stream_set_target(s, "some-device"), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_role(s, "Music"), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_audio_config(s, &cfg), PWF_OK);
+
+    PWF_ASSERT_EQ(pwf_stream_set_target(s, "other-device"), PWF_ERR_INVALID_STATE);
+    PWF_ASSERT_EQ(pwf_stream_set_role(s, "Movie"), PWF_ERR_INVALID_STATE);
+    PWF_ASSERT_EQ(strcmp(s->target, "some-device"), 0);
+    PWF_ASSERT_EQ(strcmp(s->role, "Music"), 0);
+
+    /* Still refused while running and after a stop. */
+    PWF_ASSERT_EQ(pwf_stream_start(s), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_target(s, "other-device"), PWF_ERR_INVALID_STATE);
+    PWF_ASSERT_EQ(pwf_stream_set_role(s, "Movie"), PWF_ERR_INVALID_STATE);
+    PWF_ASSERT_EQ(pwf_stream_stop(s, false), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_target(s, "other-device"), PWF_ERR_INVALID_STATE);
+    PWF_ASSERT_EQ(pwf_stream_set_role(s, "Movie"), PWF_ERR_INVALID_STATE);
+
+    /* NULL and "" name nothing, so clearing is accepted. */
+    PWF_ASSERT_EQ(pwf_stream_set_target(s, NULL), PWF_OK);
+    PWF_ASSERT(s->target == NULL);
+    PWF_ASSERT_EQ(pwf_stream_set_role(s, ""), PWF_OK);
+    PWF_ASSERT(s->role == NULL);
+
+    pwf_stream_destroy(s);
+}
+
 /* The target hint and manual wiring are exclusive in BOTH call orders. */
 static void test_hint_and_manual_are_exclusive(void)
 {
@@ -273,6 +306,7 @@ int main(void)
     test_mode_is_fixed_after_connect();
     test_mode_is_fixed_after_video_connect();
     test_format_is_fixed_while_running_or_linked();
+    test_target_and_role_are_fixed_after_connect();
     test_hint_and_manual_are_exclusive();
     test_link_ordering_and_mode();
     test_unlink_without_links_is_refused();
