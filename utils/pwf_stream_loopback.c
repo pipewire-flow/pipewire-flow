@@ -379,7 +379,7 @@ int main(int argc, char** argv)
 
         struct pwf_video_config video_cfg = { .width = width, .height = height, .pixel_format = pixel_format,
                                               .fps = fps };
-        struct pwf_stream_dmabuf_opts dmabuf_opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+        struct pwf_buffer_opts dmabuf_opts = { .memory = PWF_BUFFER_MEMORY_DMABUF };
 
         for (int i = 0; i < video_streams_n; i++) {
             video_ctxs[i].index = i;

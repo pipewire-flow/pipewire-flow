@@ -109,7 +109,7 @@ int main(int argc, char** argv)
                video_cfg.pixel_format, video_cfg.width, video_cfg.height, video_cfg.fps);
     }
 
-    struct pwf_filter_port_opts dmabuf_opts = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_buffer_opts dmabuf_opts = { .memory = PWF_BUFFER_MEMORY_DMABUF };
     struct pwf_filter_port* video_in =
         pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &video_cfg, &dmabuf_opts);
     struct pwf_filter_port* audio_in =

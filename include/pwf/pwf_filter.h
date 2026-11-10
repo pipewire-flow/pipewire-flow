@@ -194,35 +194,23 @@ PWF_API struct pwf_filter_port* pwf_filter_add_video_port(struct pwf_filter* fil
                                                           const struct pwf_video_config* config);
 
 /**
- * @brief Extensible per-port options.
- *
- * A NULL or zeroed struct means AUTO, i.e. the behavior of the non-_ex
- * add call. enum pwf_port_memory is declared in pwf_stream.h, shared with
- * pwf_stream_buffer_get_dmabuf_planes().
- */
-struct pwf_filter_port_opts {
-    enum pwf_port_memory memory; /**< AUTO (default) or DMABUF; any other value is rejected. */
-    uint32_t reserved[2];        /**< Must be zero, or the call is rejected; reserved for future options. Zero-initialize the struct. */
-};
-
-/**
  * @brief Adds one video port with options.
  *
  * Equivalent to pwf_filter_add_video_port() when `opts` is NULL. With
- * opts->memory == PWF_PORT_MEMORY_DMABUF the port (input only) negotiates
+ * opts->memory == PWF_BUFFER_MEMORY_DMABUF the port (input only) negotiates
  * DMABUF frames; its pwf_filter_port_buffer.data is NULL and planes are
  * read via pwf_filter_port_buffer_get_dmabuf_planes().
  *
  * @param filter    The filter to add the port to, not yet started.
  * @param direction PWF_FILTER_PORT_INPUT or PWF_FILTER_PORT_OUTPUT.
  * @param config    The requested width, height, pixel format, and frame rate.
- * @param opts      Per-port options, or NULL for AUTO.
- * @return The new port handle, or NULL for DMABUF on an output port, an `opts` with a nonzero reserved field or an unknown memory value, or an unsupported/invalid request.
+ * @param opts      Buffer delivery options, or NULL for AUTO.
+ * @return The new port handle, or NULL for DMABUF on an output port, an `opts` with a nonzero flags or reserved field or an unknown memory value, or an unsupported/invalid request.
  */
 PWF_API struct pwf_filter_port* pwf_filter_add_video_port_ex(struct pwf_filter* filter,
                                                              enum pwf_filter_port_direction direction,
                                                              const struct pwf_video_config* config,
-                                                             const struct pwf_filter_port_opts* opts);
+                                                             const struct pwf_buffer_opts* opts);
 
 /**
  * @brief Fills up to `planes_len` entries of `planes` with the current

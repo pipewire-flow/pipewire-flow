@@ -6,6 +6,7 @@
 
 #include <pipewire/keys.h>
 
+#include "pwf_dmabuf_internal.h"
 #include "pwf_filter_internal.h"
 #include "pwf_log_internal.h"
 #include "pwf_spa_format_internal.h"
@@ -220,7 +221,7 @@ struct pwf_filter_port* pwf_filter_add_event_port(struct pwf_filter* handle, enu
 struct pwf_filter_port* pwf_filter_add_video_port_ex(struct pwf_filter* handle,
                                                      enum pwf_filter_port_direction direction,
                                                      const struct pwf_video_config* config,
-                                                     const struct pwf_filter_port_opts* opts)
+                                                     const struct pwf_buffer_opts* opts)
 {
     struct pwf_filter* filter = (struct pwf_filter*)handle;
     if (!pwf_filter_can_add_port(filter, __func__))
@@ -234,16 +235,13 @@ struct pwf_filter_port* pwf_filter_add_video_port_ex(struct pwf_filter* handle,
                       pwf_filter_log_name(filter), __func__, config->width, config->height, config->fps);
         return NULL;
     }
-    /* An option this version does not know is refused rather than ignored, so
-     * a later version can give the reserved words and new values a meaning. */
-    if (opts && (opts->reserved[0] != 0 || opts->reserved[1] != 0 ||
-                 (opts->memory != PWF_PORT_MEMORY_AUTO && opts->memory != PWF_PORT_MEMORY_DMABUF))) {
-        pwf_log_error("filter '%s': %s: opts has a nonzero reserved field or an unknown memory value %d",
+    if (!pwf_buffer_opts_valid(opts)) {
+        pwf_log_error("filter '%s': %s: opts has a nonzero flags or reserved field or an unknown memory value %d",
                       pwf_filter_log_name(filter), __func__, (int)opts->memory);
         return NULL;
     }
 
-    bool want_dmabuf = opts && opts->memory == PWF_PORT_MEMORY_DMABUF;
+    bool want_dmabuf = opts && opts->memory == PWF_BUFFER_MEMORY_DMABUF;
     /* DMABUF is an import-only path for video input; refuse it on output. */
     if (want_dmabuf && direction != PWF_FILTER_PORT_INPUT) {
         pwf_log_error("filter '%s': %s: DMABUF is only available on an input port", pwf_filter_log_name(filter),

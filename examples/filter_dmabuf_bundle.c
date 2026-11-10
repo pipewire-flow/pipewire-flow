@@ -52,7 +52,7 @@ int main(void)
     }
 
     struct pwf_video_config vcfg = { .width = 640, .height = 480, .pixel_format = "RGB", .fps = 30 };
-    struct pwf_filter_port_opts dmabuf = { .memory = PWF_PORT_MEMORY_DMABUF };
+    struct pwf_buffer_opts dmabuf = { .memory = PWF_BUFFER_MEMORY_DMABUF };
     struct pwf_filter_port* video_in = pwf_filter_add_video_port_ex(filter, PWF_FILTER_PORT_INPUT, &vcfg, &dmabuf);
 
     struct pwf_filter_port* sig_in = pwf_filter_add_signal_port(filter, PWF_FILTER_PORT_INPUT);

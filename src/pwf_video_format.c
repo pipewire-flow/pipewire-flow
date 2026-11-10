@@ -1,10 +1,11 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "pwf_dmabuf_internal.h"
 #include "pwf_spa_format_internal.h"
 #include "pwf_stream_internal.h"
 
 int pwf_stream_set_video_config_ex(struct pwf_stream* handle, const struct pwf_video_config* config,
-                                    const struct pwf_stream_dmabuf_opts* opts)
+                                    const struct pwf_buffer_opts* opts)
 {
     struct pwf_stream* stream = (struct pwf_stream*)handle;
     if (!stream || stream->type != PWF_DATA_VIDEO || !config || !config->pixel_format)
@@ -16,13 +17,10 @@ int pwf_stream_set_video_config_ex(struct pwf_stream* handle, const struct pwf_v
         return PWF_ERR_INVALID_ARG;
     if (config->width <= 0 || config->height <= 0 || config->fps < 0)
         return PWF_ERR_INVALID_FORMAT;
-    /* An option this version does not know is refused rather than ignored, so
-     * a later version can give the reserved words and new values a meaning. */
-    if (opts && (opts->reserved[0] != 0 || opts->reserved[1] != 0 ||
-                 (opts->memory != PWF_PORT_MEMORY_AUTO && opts->memory != PWF_PORT_MEMORY_DMABUF)))
+    if (!pwf_buffer_opts_valid(opts))
         return PWF_ERR_INVALID_ARG;
 
-    bool use_dmabuf = opts && opts->memory == PWF_PORT_MEMORY_DMABUF;
+    bool use_dmabuf = opts && opts->memory == PWF_BUFFER_MEMORY_DMABUF;
     bool is_mjpg = pwf_spa_pixel_format_is_mjpg(config->pixel_format);
     bool is_h264 = pwf_spa_pixel_format_is_h264(config->pixel_format);
     bool is_encoded = is_mjpg || is_h264;
