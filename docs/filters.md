@@ -83,7 +83,7 @@ callback:
   for delivery on the next cycle (the event-port equivalent of
   `pwf_filter_port_push_data()`); on an output event port, it must be
   called from within the processing callback and publishes the event
-  when that cycle ends. Neither the caller nor the library ever
+  when that cycle ends; anywhere else it returns `PWF_ERR_INVALID_STATE`. Neither the caller nor the library ever
   constructs or parses a PipeWire/SPA POD directly. An item another
   PipeWire client wrote in a control kind this library does not recognize
   still arrives, as `PWF_EVENT_UNKNOWN` with its raw undecoded bytes;
