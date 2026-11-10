@@ -75,7 +75,7 @@ struct pwf_video_config {
     int width;                /**< Frame width in pixels. */
     int height;               /**< Frame height in pixels. */
     const char* pixel_format; /**< "RGB", "YUYV", "NV12", "NV21", "I420", "MJPG", or "H264". MJPG and H264 are compressed: each delivered frame's size varies, and DMABUF delivery is not available for them. */
-    int fps;                  /**< Frames per second; 0 negotiates automatically. */
+    int fps;                  /**< Frames per second; 0 negotiates automatically. A source's actual rate may differ slightly from this whole number. */
 };
 
 /**
