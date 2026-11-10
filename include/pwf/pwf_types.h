@@ -12,6 +12,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "pwf/pwf_export.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -34,7 +36,7 @@ enum pwf_data_type {
 /** @brief Library error codes. Negative values only; 0 is success. */
 enum pwf_error {
     PWF_OK                     = 0,  /**< Success. */
-    PWF_ERR_INVALID_ARG        = -1, /**< A NULL/out-of-range argument, or a call invalid for the object's current state or routing mode. */
+    PWF_ERR_INVALID_ARG        = -1, /**< A NULL/out-of-range argument, or a call this kind of stream or port never accepts (e.g. a video format on an audio stream). */
     PWF_ERR_CONNECT_FAILED     = -2, /**< Connecting to PipeWire, or asking it to create a stream, link or query, failed. */
     PWF_ERR_INVALID_FORMAT     = -3, /**< An unrecognized pixel/sample format string, or an out-of-range dimension/rate. */
     PWF_ERR_NOT_CONFIGURED     = -4, /**< Called before a required prior step, e.g. start() before a format was set, link() before start(), or unlink() with nothing linked. */
@@ -42,8 +44,20 @@ enum pwf_error {
     PWF_ERR_IN_CALLBACK        = -6, /**< Called from inside one of the object's own callbacks, where the call cannot run; call it again after the callback returns. */
     PWF_ERR_NOT_FOUND          = -7, /**< No node in the graph matches the target name or serial; it may have gone away or never existed. */
     PWF_ERR_TIMEOUT            = -8, /**< PipeWire did not answer, or a link did not negotiate, within the library's time limit; the same call may succeed if retried. */
-    PWF_ERR_NO_MEMORY          = -9  /**< A memory allocation failed. */
+    PWF_ERR_NO_MEMORY          = -9, /**< A memory allocation failed. */
+    PWF_ERR_INVALID_STATE      = -10 /**< The arguments are fine, but the object is past the point where the call applies or in the routing mode that excludes it: a setting changed after connect or start, a second link, a target while autoconnect is off. */
 };
+
+/**
+ * @brief Describes a library error code in a short English phrase.
+ *
+ * Meant for log and diagnostic output, e.g. alongside the value an API
+ * call returned or an error callback received.
+ *
+ * @param error An enum pwf_error value, as returned by any pwf_ call.
+ * @return A static string, never NULL; "Unknown error" for a value outside enum pwf_error. Do not free it.
+ */
+PWF_API const char* pwf_strerror(int error);
 
 /**
  * @brief Audio capture configuration passed to

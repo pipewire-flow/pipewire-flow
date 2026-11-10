@@ -269,11 +269,11 @@ int pwf_stream_set_autoconnect(struct pwf_stream* handle, bool enable)
         return PWF_ERR_INVALID_ARG;
     /* The routing mode is fixed once the format has connected the stream. */
     if (stream->pw_stream)
-        return PWF_ERR_INVALID_ARG;
+        return PWF_ERR_INVALID_STATE;
     /* A target is a hint to the session manager, so it means nothing once the
      * application takes the wiring over. */
     if (!enable && stream->target)
-        return PWF_ERR_INVALID_ARG;
+        return PWF_ERR_INVALID_STATE;
 
     stream->autoconnect = enable;
     return PWF_OK;
@@ -285,7 +285,7 @@ int pwf_stream_set_target(struct pwf_stream* handle, const char* target)
     if (!stream)
         return PWF_ERR_INVALID_ARG;
     if (target && *target && !stream->autoconnect)
-        return PWF_ERR_INVALID_ARG; /* see pwf_stream_set_autoconnect() */
+        return PWF_ERR_INVALID_STATE; /* see pwf_stream_set_autoconnect() */
 
     return pwf_stream_replace_string(&stream->target, target);
 }

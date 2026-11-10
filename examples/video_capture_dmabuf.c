@@ -29,11 +29,11 @@ static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* b
            planes[0].stride, planes[0].size, (long long)buf->pts);
 }
 
-static void on_error(struct pwf_stream* stream, int error_code, void* user_data)
+static void on_error(struct pwf_stream* stream, enum pwf_error error_code, void* user_data)
 {
     (void)stream;
     (void)user_data;
-    fprintf(stderr, "video: source lost or could not negotiate DMABUF (error %d)\n", error_code);
+    fprintf(stderr, "video: source lost or could not negotiate DMABUF (%s)\n", pwf_strerror(error_code));
     g_running = 0;
 }
 

@@ -1,5 +1,6 @@
 pipewire_flow_sources = files(
   'pwf_log.c',
+  'pwf_error.c',
   'pwf_pw_core.c',
   'pwf_spa_format.c',
   'pwf_stream.c',

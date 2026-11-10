@@ -31,12 +31,12 @@ static void on_data(struct pwf_stream* stream, const struct pwf_stream_buffer* b
     g_buffers++;
 }
 
-static void on_error(struct pwf_stream* stream, int error_code, void* user_data)
+static void on_error(struct pwf_stream* stream, enum pwf_error error_code, void* user_data)
 {
     (void)stream;
     (void)user_data;
     /* Nothing re-links us: that decision is ours to make. */
-    fprintf(stderr, "device lost (error %d) — nothing will re-route on its own\n", error_code);
+    fprintf(stderr, "device lost (%s) — nothing will re-route on its own\n", pwf_strerror(error_code));
     g_running = 0;
 }
 

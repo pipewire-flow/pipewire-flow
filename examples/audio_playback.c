@@ -45,11 +45,11 @@ static void on_fill(struct pwf_stream* stream, struct pwf_stream_playback_buffer
     *reported = (double)buf->pts;
 }
 
-static void on_error(struct pwf_stream* stream, int error_code, void* user_data)
+static void on_error(struct pwf_stream* stream, enum pwf_error error_code, void* user_data)
 {
     (void)stream;
     (void)user_data;
-    fprintf(stderr, "playback: output device lost (error %d)\n", error_code);
+    fprintf(stderr, "playback: output device lost (%s)\n", pwf_strerror(error_code));
     g_running = 0;
 }
 

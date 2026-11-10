@@ -255,7 +255,7 @@ int pwf_filter_port_set_hold(struct pwf_filter_port* port_handle, bool enable)
     if (!port || port->direction != PWF_FILTER_PORT_INPUT)
         return PWF_ERR_INVALID_ARG;
     if (port->filter->state != PWF_FILTER_STATE_CREATED)
-        return PWF_ERR_INVALID_ARG;
+        return PWF_ERR_INVALID_STATE;
 
     port->hold_enabled = enable;
     return PWF_OK;
