@@ -45,8 +45,8 @@ enum pwf_error {
     PWF_ERR_NOT_FOUND          = -7, /**< No node in the graph matches the target name or serial; it may have gone away or never existed. */
     PWF_ERR_TIMEOUT            = -8, /**< PipeWire did not answer, or a link did not negotiate, within the library's time limit; the same call may succeed if retried. */
     PWF_ERR_NO_MEMORY          = -9, /**< A memory allocation failed. */
-    PWF_ERR_INVALID_STATE      = -10, /**< The arguments are fine, but the object is past the point where the call applies or in the routing mode that excludes it: a setting changed after connect or start, a second link, a target while autoconnect is off. */
-    PWF_ERR_NO_SPACE           = -11 /**< The data does not fit where it has to go: an event pushed to an output port exceeds what is left of this cycle's buffer, or the port has no buffer this cycle. A later cycle may have room. */
+    PWF_ERR_INVALID_STATE      = -10, /**< The arguments are fine, but the object's current state or routing mode rules the call out: a setting changed after connect or start, a second link, a target while autoconnect is off, an output event pushed outside the processing callback. */
+    PWF_ERR_NO_SPACE           = -11 /**< The data does not fit where it has to go: an event pushed to an output port exceeds what is left of this cycle's buffer, or the port has no buffer this cycle. A later cycle may have room, unless the event is larger than the port's whole buffer. */
 };
 
 /**

@@ -354,9 +354,10 @@ PWF_API int pwf_filter_port_get_event(const struct pwf_filter_port* port, size_t
  *
  * Behavior depends on `port`'s direction:
  *   - Output port: appends to the current processing cycle's outgoing
- *     events, published when the cycle ends. Must be called only from
- *     within the processing callback (its capacity is bounded by that
- *     cycle's negotiated buffer).
+ *     events, published when the cycle ends. Only valid from within that
+ *     filter's processing callback (its capacity is bounded by that
+ *     cycle's negotiated buffer); anywhere else it returns
+ *     PWF_ERR_INVALID_STATE.
  *   - Input port: stages the event for delivery on the filter's next
  *     processing cycle, without creating any PipeWire-level connection
  *     — the event-port equivalent of pwf_filter_port_push_data(), for
@@ -366,7 +367,7 @@ PWF_API int pwf_filter_port_get_event(const struct pwf_filter_port* port, size_t
  *
  * @param port  The event port to push to.
  * @param event The event to copy and enqueue.
- * @return PWF_OK, PWF_ERR_INVALID_ARG (wrong port kind, or an invalid/unrecognized PROPERTY key), PWF_ERR_NO_SPACE (output ports only: no room left in the current cycle's buffer, or no buffer this cycle), or PWF_ERR_NO_MEMORY when the event cannot be copied.
+ * @return PWF_OK, PWF_ERR_INVALID_ARG (wrong port kind, or an invalid/unrecognized PROPERTY key), PWF_ERR_INVALID_STATE (output ports only: called outside the processing callback), PWF_ERR_NO_SPACE (output ports only: no room left in the current cycle's buffer, or no buffer this cycle), or PWF_ERR_NO_MEMORY when the event cannot be copied.
  */
 PWF_API int pwf_filter_port_push_event(struct pwf_filter_port* port, const struct pwf_event* event);
 
