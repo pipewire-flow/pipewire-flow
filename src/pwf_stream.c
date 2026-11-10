@@ -74,8 +74,8 @@ static void pwf_stream_on_param_changed(void* data, uint32_t id, const struct sp
 }
 
 /* Wakes a draining pwf_stream_stop(..., true), waiting on this same flag
- * under stream->conn.loop's lock. Shared by both directions: PipeWire
- * drains "played or recorded" data alike. */
+ * under stream->conn.loop's lock. Playback only: PipeWire reports a stream
+ * drained from its output path alone. */
 static void pwf_stream_on_drained(void* data)
 {
     struct pwf_stream* stream = data;
@@ -88,7 +88,6 @@ static const struct pw_stream_events pwf_stream_events = {
     .state_changed = pwf_stream_on_state_changed,
     .param_changed = pwf_stream_on_param_changed,
     .process = pwf_stream_on_process,
-    .drained = pwf_stream_on_drained,
 };
 
 static const struct pw_stream_events pwf_stream_playback_events = {
@@ -349,7 +348,9 @@ int pwf_stream_stop(struct pwf_stream* handle, bool drain)
 
     pw_thread_loop_lock(stream->conn.loop);
 
-    if (drain) {
+    /* A capture stream hands over each buffer in the cycle it arrives, and
+     * PipeWire never reports one drained, so there is nothing to wait for. */
+    if (drain && stream->direction == PWF_STREAM_DIRECTION_PLAYBACK) {
         struct timespec deadline;
         stream->drained = false;
         pw_thread_loop_get_time(stream->conn.loop, &deadline, PWF_STREAM_DRAIN_TIMEOUT_NSEC);

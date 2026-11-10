@@ -296,6 +296,15 @@ int pwf_filter_start(struct pwf_filter* handle)
     return PWF_OK;
 }
 
+static bool pwf_filter_has_input_port(const struct pwf_filter* filter)
+{
+    for (size_t i = 0; i < filter->n_ports; i++) {
+        if (filter->ports[i]->direction == PWF_FILTER_PORT_INPUT)
+            return true;
+    }
+    return false;
+}
+
 int pwf_filter_stop(struct pwf_filter* handle, bool drain)
 {
     struct pwf_filter* filter = (struct pwf_filter*)handle;
@@ -308,7 +317,9 @@ int pwf_filter_stop(struct pwf_filter* handle, bool drain)
 
     pw_thread_loop_lock(filter->conn.loop);
 
-    if (drain) {
+    /* PipeWire reports a filter drained only on a cycle where no input port
+     * received data, so with a live source the wait could only time out. */
+    if (drain && !pwf_filter_has_input_port(filter)) {
         /* Must run before the links are dropped below, or a disconnected
          * output port's queued data has nowhere left to go. */
         struct timespec deadline;
