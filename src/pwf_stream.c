@@ -125,6 +125,7 @@ static struct pwf_stream* pwf_stream_alloc(enum pwf_data_type type, enum pwf_str
 
     struct pwf_stream* stream = calloc(1, sizeof(*stream));
     if (!stream) {
+        pwf_log_error("stream: out of memory allocating the stream");
         pwf_pw_global_deinit();
         return NULL;
     }
@@ -147,8 +148,14 @@ static struct pwf_stream* pwf_stream_alloc(enum pwf_data_type type, enum pwf_str
 
 struct pwf_stream* pwf_stream_create(enum pwf_data_type type, pwf_stream_data_func_t callback, void* user_data)
 {
-    if (!callback || (type != PWF_DATA_AUDIO && type != PWF_DATA_VIDEO))
+    if (!callback) {
+        pwf_log_error("%s: callback is NULL", __func__);
         return NULL;
+    }
+    if (type != PWF_DATA_AUDIO && type != PWF_DATA_VIDEO) {
+        pwf_log_error("%s: a stream carries audio or video, not data type %d", __func__, (int)type);
+        return NULL;
+    }
 
     struct pwf_stream* stream = pwf_stream_alloc(type, PWF_STREAM_DIRECTION_CAPTURE, user_data);
     if (!stream)
@@ -160,8 +167,10 @@ struct pwf_stream* pwf_stream_create(enum pwf_data_type type, pwf_stream_data_fu
 
 struct pwf_stream* pwf_stream_create_playback(pwf_stream_playback_func_t callback, void* user_data)
 {
-    if (!callback)
+    if (!callback) {
+        pwf_log_error("%s: callback is NULL", __func__);
         return NULL;
+    }
 
     struct pwf_stream* stream =
         pwf_stream_alloc(PWF_DATA_AUDIO, PWF_STREAM_DIRECTION_PLAYBACK, user_data);
