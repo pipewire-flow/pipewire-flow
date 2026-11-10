@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <pwf/pwf_filter.h>
@@ -180,8 +181,12 @@ static void test_audio_link(const char* mic)
     /* The microphone is driving the graph, so the filter must have run. */
     PWF_ASSERT(c.cycles > 0);
 
-    /* Draining waits for already-queued input to reach on_process too. */
+    /* A live input never runs dry, so draining must not wait out the timeout. */
+    struct timespec before, after;
+    clock_gettime(CLOCK_MONOTONIC, &before);
     PWF_ASSERT_EQ(pwf_filter_stop(filter, true), PWF_OK);
+    clock_gettime(CLOCK_MONOTONIC, &after);
+    PWF_ASSERT(after.tv_sec - before.tv_sec < 2);
     pwf_filter_destroy(filter);
 }
 

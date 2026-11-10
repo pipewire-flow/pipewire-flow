@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 
+#include <time.h>
 #include <unistd.h>
 
 #include "pwf/pwf_stream.h"
@@ -13,6 +14,13 @@ static void count_data_cb(struct pwf_stream* stream, const struct pwf_stream_buf
     (void)buf;
     (void)user_data;
     g_data_calls++;
+}
+
+static double now_seconds(void)
+{
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return (double)t.tv_sec + (double)t.tv_nsec / 1e9;
 }
 
 int main(void)
@@ -39,6 +47,17 @@ int main(void)
     sleep(1);
     PWF_ASSERT_EQ(pwf_stream_stop(s2, false), PWF_OK);
     pwf_stream_destroy(s2);
+
+    /* A capture stream has no queue to wait out, so a draining stop must not
+     * sit through the drain timeout. */
+    struct pwf_stream* drained = pwf_stream_create(PWF_DATA_AUDIO, count_data_cb, NULL);
+    PWF_ASSERT(drained != NULL);
+    PWF_ASSERT_EQ(pwf_stream_set_audio_config(drained, &(struct pwf_audio_config){ .sample_rate = 48000, .channels = 2 }), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_start(drained), PWF_OK);
+    double before_stop = now_seconds();
+    PWF_ASSERT_EQ(pwf_stream_stop(drained, true), PWF_OK);
+    PWF_ASSERT(now_seconds() - before_stop < 2.0);
+    pwf_stream_destroy(drained);
 
     /* destroy() while running must stop delivery and release resources safely. */
     struct pwf_stream* s3 = pwf_stream_create(PWF_DATA_AUDIO, count_data_cb, NULL);
