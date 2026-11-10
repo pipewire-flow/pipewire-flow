@@ -38,8 +38,8 @@ enum pwf_error {
     PWF_OK                     = 0,  /**< Success. */
     PWF_ERR_INVALID_ARG        = -1, /**< A NULL/out-of-range argument, or a call this kind of stream or port never accepts (e.g. a video format on an audio stream). */
     PWF_ERR_CONNECT_FAILED     = -2, /**< Connecting to PipeWire, or asking it to create a stream, link or query, failed. */
-    PWF_ERR_INVALID_FORMAT     = -3, /**< An unrecognized pixel/sample format string, or an out-of-range dimension/rate. */
-    PWF_ERR_NOT_CONFIGURED     = -4, /**< Called before a required prior step, e.g. start() before a format was set, link() before start(), or unlink() with nothing linked. */
+    PWF_ERR_INVALID_FORMAT     = -3, /**< An unrecognized pixel/sample format string, an out-of-range dimension/rate, or a target whose format or channel count a link cannot use. */
+    PWF_ERR_NOT_CONFIGURED     = -4, /**< Called before a required prior step, e.g. start() before a format was set, link() before start(), unlink() with nothing linked, or a format query with no target named or set. */
     PWF_ERR_SOURCE_UNAVAILABLE = -5, /**< The connected source disappeared, or could not provide the requested memory type (see pwf_stream_error_func_t). */
     PWF_ERR_IN_CALLBACK        = -6, /**< Called from inside one of the object's own callbacks, where the call cannot run; call it again after the callback returns. */
     PWF_ERR_NOT_FOUND          = -7, /**< No node in the graph matches the target name or serial; it may have gone away or never existed. */

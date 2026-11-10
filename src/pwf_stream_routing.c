@@ -179,7 +179,7 @@ int pwf_stream_get_target_video_formats(struct pwf_stream* handle, const char* t
      * exists for: pick a device, then ask what it can deliver. */
     const char* name = target ? target : stream->target;
     if (!name)
-        return PWF_ERR_INVALID_ARG;
+        return PWF_ERR_NOT_CONFIGURED;
     int bound = pwf_pw_registry_bind(&stream->registry, &stream->conn);
     if (bound < 0)
         return pwf_pw_error_from_sync(bound);
@@ -330,13 +330,13 @@ int pwf_stream_link(struct pwf_stream* handle, const char* target)
     size_t n_peer =
         pwf_pw_registry_list_ports(&stream->registry, target_node, peer_dir, peer, PWF_MAX_CHANNELS);
     if (n_own > PWF_MAX_CHANNELS || n_peer > PWF_MAX_CHANNELS)
-        return PWF_ERR_INVALID_ARG;
+        return PWF_ERR_INVALID_FORMAT;
 
     size_t surplus = 0;
     size_t pairs = pwf_stream_pair_ports(n_own, n_peer, &surplus);
     if (pairs == 0) {
         pwf_log_error("stream: '%s' offers %zu channels, this stream needs %zu", target, n_peer, n_own);
-        return PWF_ERR_INVALID_ARG;
+        return PWF_ERR_INVALID_FORMAT;
     }
 
     struct pwf_stream_link_set* set = calloc(1, sizeof(*set));
