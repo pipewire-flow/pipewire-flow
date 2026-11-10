@@ -53,7 +53,7 @@ static void test_calls_refused_in_data_callback(void)
     pwf_stream_destroy(s);
     pwf_stream_processing = NULL;
 
-    PWF_ASSERT_EQ(pwf_stream_set_role(s, "Music"), PWF_OK); /* The refused destroy left it alive. */
+    PWF_ASSERT_EQ(pwf_stream_set_role(s, NULL), PWF_OK); /* The refused destroy left it alive. */
     PWF_ASSERT_EQ(pwf_stream_stop(s, false), PWF_OK);
     pwf_stream_destroy(s);
 }
