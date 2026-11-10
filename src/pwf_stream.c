@@ -10,6 +10,11 @@
 
 _Thread_local const struct pwf_stream* pwf_stream_processing;
 
+bool pwf_stream_can_set_format(const struct pwf_stream* stream)
+{
+    return stream->state != PWF_STREAM_STATE_RUNNING && !stream->links;
+}
+
 bool pwf_stream_refuse_in_callback(const struct pwf_stream* stream, bool loop_thread_too, const char* call)
 {
     bool refused = pwf_stream_processing == stream ||

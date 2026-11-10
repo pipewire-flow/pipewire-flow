@@ -28,6 +28,8 @@ int pwf_stream_set_audio_config(struct pwf_stream* handle, const struct pwf_audi
         return PWF_ERR_INVALID_ARG;
     if (pwf_stream_refuse_in_callback(stream, true, __func__))
         return PWF_ERR_IN_CALLBACK;
+    if (!pwf_stream_can_set_format(stream))
+        return PWF_ERR_INVALID_STATE;
     if (config->sample_rate <= 0 || config->channels <= 0)
         return PWF_ERR_INVALID_FORMAT;
 
