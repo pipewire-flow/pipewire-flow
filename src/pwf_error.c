@@ -27,6 +27,8 @@ const char* pwf_strerror(int error)
         return "Out of memory";
     case PWF_ERR_INVALID_STATE:
         return "Call not allowed in the current state or routing mode";
+    case PWF_ERR_NO_SPACE:
+        return "No space left in the buffer";
     default:
         return "Unknown error";
     }
