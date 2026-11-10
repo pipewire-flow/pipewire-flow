@@ -6,7 +6,9 @@
  * same separation that made the playback fill rules testable. */
 
 #include <string.h>
+#include <unistd.h>
 
+#include "pwf/pwf_filter.h"
 #include "pwf_stream_internal.h"
 #include "pwf_test.h"
 
@@ -250,6 +252,39 @@ static void test_link_reports_timeout_or_missing_target(void)
     pwf_stream_destroy(s);
 }
 
+static void on_filter_process(struct pwf_filter* filter, struct pwf_filter_port_buffer* buffers, size_t n, void* user_data)
+{
+    (void)filter;
+    (void)buffers;
+    (void)n;
+    (void)user_data;
+}
+
+/* A target with fewer channels than the stream is a format mismatch, not a bad
+ * argument. Without a session manager the stream's own ports never appear,
+ * so the call stops at TIMEOUT before it gets as far as counting channels. */
+static void test_link_to_too_few_channels(void)
+{
+    struct pwf_filter* mono = pwf_filter_create("pwf-test-one-channel", on_filter_process, NULL);
+    PWF_ASSERT(mono != NULL);
+    PWF_ASSERT(pwf_filter_add_signal_port(mono, PWF_FILTER_PORT_OUTPUT) != NULL);
+    PWF_ASSERT_EQ(pwf_filter_start(mono), PWF_OK);
+    usleep(300000); /* its node has to reach the registry */
+
+    struct pwf_stream* s = make_capture();
+    struct pwf_audio_config cfg = { .sample_rate = 48000, .channels = 2 };
+    PWF_ASSERT_EQ(pwf_stream_set_autoconnect(s, false), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_set_audio_config(s, &cfg), PWF_OK);
+    PWF_ASSERT_EQ(pwf_stream_start(s), PWF_OK);
+
+    int res = pwf_stream_link(s, "pwf-test-one-channel");
+    PWF_ASSERT(res == PWF_ERR_INVALID_FORMAT || res == PWF_ERR_TIMEOUT);
+    printf("test_stream_routing: link to one channel: %s\n", pwf_strerror(res));
+
+    pwf_stream_destroy(s);
+    pwf_filter_destroy(mono);
+}
+
 /* Opting out and never naming a device is a legitimate state: the stream runs
  * and simply carries nothing. */
 static void test_opted_out_and_unlinked_runs(void)
@@ -312,6 +347,7 @@ int main(void)
     test_unlink_without_links_is_refused();
     test_opted_out_and_unlinked_runs();
     test_link_reports_timeout_or_missing_target();
+    test_link_to_too_few_channels();
     test_release_is_safe_when_unlinked();
     test_get_target_list();
     printf("test_stream_routing: all cases passed\n");

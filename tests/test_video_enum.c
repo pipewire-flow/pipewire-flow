@@ -94,9 +94,9 @@ static void test_stream_rejections(void)
     PWF_ASSERT_EQ(pwf_stream_get_target_video_formats(video, "some-node", fmts, 4, NULL),
                   PWF_ERR_INVALID_ARG);
 
-    /* NULL target with none set means there is nothing to ask about. */
+    /* NULL target with none set means a step was skipped: set_target(). */
     PWF_ASSERT_EQ(pwf_stream_get_target_video_formats(video, NULL, fmts, 4, &n),
-                  PWF_ERR_INVALID_ARG);
+                  PWF_ERR_NOT_CONFIGURED);
 
     /* A name no node carries resolves to nothing. */
     PWF_ASSERT_EQ(
