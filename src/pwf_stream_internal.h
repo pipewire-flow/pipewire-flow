@@ -95,6 +95,10 @@ extern _Thread_local const struct pwf_stream* pwf_stream_processing;
 
 /* Refuses a call from inside `stream`'s data or playback callback, and also from its loop
  * thread when `loop_thread_too`, where the call would wait on that thread. Logs `call` on refusal. */
+/* Whether a format call may run: it replaces the pw_stream, which would
+ * silently stop a running stream and strand its links. */
+bool pwf_stream_can_set_format(const struct pwf_stream* stream);
+
 bool pwf_stream_refuse_in_callback(const struct pwf_stream* stream, bool loop_thread_too, const char* call);
 
 /* (Re)connects the underlying pw_stream with the given negotiated format

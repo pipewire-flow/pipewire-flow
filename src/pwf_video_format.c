@@ -15,6 +15,8 @@ int pwf_stream_set_video_config_ex(struct pwf_stream* handle, const struct pwf_v
     /* Playback is audio-only, so a video format has nothing to connect to. */
     if (stream->direction != PWF_STREAM_DIRECTION_CAPTURE)
         return PWF_ERR_INVALID_ARG;
+    if (!pwf_stream_can_set_format(stream))
+        return PWF_ERR_INVALID_STATE;
     if (config->width <= 0 || config->height <= 0 || config->fps < 0)
         return PWF_ERR_INVALID_FORMAT;
     if (!pwf_buffer_opts_valid(opts))

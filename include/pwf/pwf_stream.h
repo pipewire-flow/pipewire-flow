@@ -272,17 +272,26 @@ PWF_API int pwf_stream_unlink(struct pwf_stream* stream);
 
 /**
  * @brief Configures audio format before starting an audio stream.
- * @param stream The stream to configure; must not have started yet.
+ *
+ * This is what connects the stream, so calling it again replaces that
+ * connection. That is refused while the stream runs or has links: stop and
+ * unlink it first. A stream that lost its source is already stopped.
+ *
+ * @param stream The stream to configure; not running and with no links.
  * @param config The requested sample rate, channel count, and sample format.
- * @return PWF_OK, PWF_ERR_INVALID_ARG (NULL stream/config, or not an audio stream), PWF_ERR_INVALID_FORMAT (unrecognized format or out-of-range field), PWF_ERR_IN_CALLBACK (from inside a callback), or PWF_ERR_CONNECT_FAILED.
+ * @return PWF_OK, PWF_ERR_INVALID_ARG (NULL stream/config, or not an audio stream), PWF_ERR_INVALID_FORMAT (unrecognized format or out-of-range field), PWF_ERR_INVALID_STATE (running or linked), PWF_ERR_IN_CALLBACK (from inside a callback), or PWF_ERR_CONNECT_FAILED.
  */
 PWF_API int pwf_stream_set_audio_config(struct pwf_stream* stream, const struct pwf_audio_config* config);
 
 /**
  * @brief Configures video format before starting a video stream.
- * @param stream The stream to configure; must not have started yet.
+ *
+ * Connects the stream, with the same restriction on calling it again as
+ * pwf_stream_set_audio_config().
+ *
+ * @param stream The stream to configure; not running and with no links.
  * @param config The requested width, height, pixel format, and frame rate.
- * @return PWF_OK, PWF_ERR_INVALID_ARG (NULL stream/config, or not a video-capture stream), PWF_ERR_INVALID_FORMAT (unrecognized pixel format or out-of-range dimension), PWF_ERR_IN_CALLBACK (from inside a callback), or PWF_ERR_CONNECT_FAILED.
+ * @return PWF_OK, PWF_ERR_INVALID_ARG (NULL stream/config, or not a video-capture stream), PWF_ERR_INVALID_FORMAT (unrecognized pixel format or out-of-range dimension), PWF_ERR_INVALID_STATE (running or linked), PWF_ERR_IN_CALLBACK (from inside a callback), or PWF_ERR_CONNECT_FAILED.
  */
 PWF_API int pwf_stream_set_video_config(struct pwf_stream* stream, const struct pwf_video_config* config);
 
@@ -309,10 +318,10 @@ PWF_API int pwf_stream_set_video_config(struct pwf_stream* stream, const struct 
  * never works, so it fails immediately rather than through the async path
  * above.
  *
- * @param stream The stream to configure; must not have started yet.
+ * @param stream The stream to configure; not running and with no links.
  * @param config The requested width, height, pixel format, and frame rate.
  * @param opts   Buffer delivery options, or NULL for AUTO.
- * @return PWF_OK, PWF_ERR_INVALID_ARG (NULL stream/config, not a video-capture stream, a compressed format requested with DMABUF, or an `opts` with a nonzero flags or reserved field or an unknown memory value), PWF_ERR_INVALID_FORMAT, PWF_ERR_IN_CALLBACK (from inside a callback), or PWF_ERR_CONNECT_FAILED.
+ * @return PWF_OK, PWF_ERR_INVALID_ARG (NULL stream/config, not a video-capture stream, a compressed format requested with DMABUF, or an `opts` with a nonzero flags or reserved field or an unknown memory value), PWF_ERR_INVALID_FORMAT, PWF_ERR_INVALID_STATE (running or linked), PWF_ERR_IN_CALLBACK (from inside a callback), or PWF_ERR_CONNECT_FAILED.
  */
 PWF_API int pwf_stream_set_video_config_ex(struct pwf_stream* stream, const struct pwf_video_config* config,
                                             const struct pwf_buffer_opts* opts);
