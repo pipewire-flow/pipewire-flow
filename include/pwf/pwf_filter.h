@@ -201,8 +201,8 @@ PWF_API struct pwf_filter_port* pwf_filter_add_video_port(struct pwf_filter* fil
  * pwf_stream_get_dmabuf_planes().
  */
 struct pwf_filter_port_opts {
-    enum pwf_port_memory memory; /**< AUTO (default) or DMABUF. */
-    uint32_t reserved[2];        /**< Must be zero; reserved for future options. */
+    enum pwf_port_memory memory; /**< AUTO (default) or DMABUF; any other value is rejected. */
+    uint32_t reserved[2];        /**< Must be zero, or the call is rejected; reserved for future options. Zero-initialize the struct. */
 };
 
 /**
@@ -217,7 +217,7 @@ struct pwf_filter_port_opts {
  * @param direction PWF_FILTER_PORT_INPUT or PWF_FILTER_PORT_OUTPUT.
  * @param config    The requested width, height, pixel format, and frame rate.
  * @param opts      Per-port options, or NULL for AUTO.
- * @return The new port handle, or NULL for DMABUF on an output port or an unsupported/invalid request.
+ * @return The new port handle, or NULL for DMABUF on an output port, an `opts` with a nonzero reserved field or an unknown memory value, or an unsupported/invalid request.
  */
 PWF_API struct pwf_filter_port* pwf_filter_add_video_port_ex(struct pwf_filter* filter,
                                                              enum pwf_filter_port_direction direction,
