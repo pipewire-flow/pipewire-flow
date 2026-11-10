@@ -170,9 +170,30 @@ int main(void)
     struct pwf_event unknown_kind = { .offset = 0, .kind = PWF_EVENT_UNKNOWN, .key = NULL, .data = NULL, .size = 0 };
     PWF_ASSERT_EQ(pwf_filter_port_push_event(ev_in, &unknown_kind), PWF_ERR_INVALID_ARG);
 
+    /* An output push has a cycle's buffer to fit only inside the callback. */
+    uint8_t note[3] = { 0x90, 0x3c, 0x64 };
+    struct pwf_event out_ev = { .offset = 0, .kind = PWF_EVENT_MIDI, .key = NULL, .data = note, .size = sizeof(note) };
+    PWF_ASSERT_EQ(pwf_filter_port_push_event(ev_out, &out_ev), PWF_ERR_INVALID_STATE);
+
+    /* Reaching room in a real cycle takes a link, so stand in for one: */
+    pwf_filter_processing = filter;
+    PWF_ASSERT_EQ(pwf_filter_port_push_event(ev_out, &out_ev), PWF_ERR_NO_SPACE); /* no buffer this cycle */
+    PWF_ASSERT_EQ(ev_out->n_pending_events, (size_t)0);
+    ev_out->event_output_capacity = 4096;
+    PWF_ASSERT_EQ(pwf_filter_port_push_event(ev_out, &out_ev), PWF_OK);
+    PWF_ASSERT_EQ(ev_out->n_pending_events, (size_t)1);
+    ev_out->event_output_capacity = 1;
+    PWF_ASSERT_EQ(pwf_filter_port_push_event(ev_out, &out_ev), PWF_ERR_NO_SPACE);
+    PWF_ASSERT_EQ(ev_out->n_pending_events, (size_t)1); /* the refused one is not kept */
+    pwf_filter_processing = NULL;
+    free(ev_out->pending_events[0].data);
+    ev_out->n_pending_events = 0;
+    ev_out->event_output_capacity = 0;
+
     PWF_ASSERT_EQ(pwf_filter_start(filter), PWF_OK);
     sleep(1);
     PWF_ASSERT_EQ(g_last_event_count, (size_t)0);
+    PWF_ASSERT_EQ(pwf_filter_port_push_event(ev_out, &out_ev), PWF_ERR_INVALID_STATE);
 
     uint8_t midi2[3] = { 0x80, 0x3c, 0x00 };
     struct pwf_event push_ev = { .offset = 5, .kind = PWF_EVENT_MIDI, .key = NULL, .data = midi2,
@@ -188,8 +209,8 @@ int main(void)
 
     PWF_ASSERT(g_cycles > 0);
 
-    /* Can't reach the success path without a real link (see process_cb);
-     * this only guards that the call stays within its documented contract. */
+    /* An unlinked port never has a buffer (see process_cb), so this only
+     * guards that a real cycle stays within the documented results. */
     PWF_ASSERT(g_output_push_calls > 0);
     PWF_ASSERT_EQ(g_output_push_unexpected, 0);
 
